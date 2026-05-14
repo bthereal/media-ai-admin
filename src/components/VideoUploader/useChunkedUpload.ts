@@ -7,6 +7,7 @@ interface UploadState {
   status: UploadStatus
   progress: number
   error: string | null
+  contentId: string | null
 }
 
 export interface UseChunkedUploadReturn extends UploadState {
@@ -16,7 +17,7 @@ export interface UseChunkedUploadReturn extends UploadState {
 }
 
 export function useChunkedUpload(): UseChunkedUploadReturn {
-  const [state, setState] = useState<UploadState>({ status: 'idle', progress: 0, error: null })
+  const [state, setState] = useState<UploadState>({ status: 'idle', progress: 0, error: null, contentId: null })
   const abortRef = useRef<AbortController | null>(null)
 
   const upload = useCallback(async (
@@ -28,10 +29,10 @@ export function useChunkedUpload(): UseChunkedUploadReturn {
     const controller = new AbortController()
     abortRef.current = controller
 
-    setState({ status: 'uploading', progress: 0, error: null })
+    setState({ status: 'uploading', progress: 0, error: null, contentId: null })
 
     try {
-      await uploadInChunks(file, {
+      const { contentId } = await uploadInChunks(file, {
         endpoint,
         headers,
         signal: controller.signal,
@@ -39,10 +40,10 @@ export function useChunkedUpload(): UseChunkedUploadReturn {
           setState(prev => ({ ...prev, progress: Math.round((uploaded / total) * 100) }))
         },
       })
-      setState({ status: 'complete', progress: 100, error: null })
+      setState({ status: 'complete', progress: 100, error: null, contentId: contentId ?? null })
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        setState({ status: 'idle', progress: 0, error: null })
+        setState({ status: 'idle', progress: 0, error: null, contentId: null })
       } else {
         setState(prev => ({
           ...prev,
@@ -59,7 +60,7 @@ export function useChunkedUpload(): UseChunkedUploadReturn {
 
   const reset = useCallback(() => {
     abortRef.current?.abort()
-    setState({ status: 'idle', progress: 0, error: null })
+    setState({ status: 'idle', progress: 0, error: null, contentId: null })
   }, [])
 
   return { ...state, upload, cancel, reset }

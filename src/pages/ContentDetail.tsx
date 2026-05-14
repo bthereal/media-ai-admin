@@ -1,41 +1,33 @@
 import { useEffect, useRef, useState } from 'react'
-import VideoUploader from '../components/VideoUploader/VideoUploader'
+import { Link, useParams } from 'react-router'
 import { fetchContent, getStreamUrl } from '../services/contentApi'
 import type { ContentDto, TranscriptionDto } from '../types/content-api.d.ts'
-import './Uploads.css'
+import './ContentDetail.css'
 
-const UPLOAD_ENDPOINT = (import.meta.env.VITE_UPLOAD_ENDPOINT as string | undefined) ?? ''
 const POLL_INTERVAL_MS = 3000
 
-export default function Uploads() {
-  const [contentId, setContentId] = useState<string | null>(null)
-
-  return (
-    <div className="uploads-page">
-      <h1>Upload Video</h1>
-      <VideoUploader endpoint={UPLOAD_ENDPOINT} onUploadComplete={setContentId} />
-      {contentId != null && <ContentResult key={contentId} contentId={contentId} />}
-    </div>
-  )
-}
-
-function ContentResult({ contentId }: { contentId: string }) {
+export default function ContentDetail() {
+  const { id } = useParams<{ id: string }>()
   const [content, setContent] = useState<ContentDto | null>(null)
+  const [notFound, setNotFound] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
+    if (!id) return
     let cancelled = false
 
     async function poll() {
-      const data = await fetchContent(contentId)
+      const data = await fetchContent(id!)
       if (cancelled) return
-      if (data) {
-        setContent(data)
-        const done = data.transcription?.status === 'completed' || data.transcription?.status === 'failed'
-        if (done && timerRef.current != null) {
-          clearInterval(timerRef.current)
-          timerRef.current = null
-        }
+      if (data === null) {
+        setNotFound(true)
+        return
+      }
+      setContent(data)
+      const done = data.transcription?.status === 'completed' || data.transcription?.status === 'failed'
+      if (done && timerRef.current != null) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
       }
     }
 
@@ -46,16 +38,27 @@ function ContentResult({ contentId }: { contentId: string }) {
       cancelled = true
       if (timerRef.current != null) clearInterval(timerRef.current)
     }
-  }, [contentId])
+  }, [id])
 
-  const streamUrl = getStreamUrl(contentId)
+  if (notFound) {
+    return (
+      <div className="content-detail">
+        <Link to="/media" className="back-link">← Media Library</Link>
+        <p className="detail-not-found">Video not found.</p>
+      </div>
+    )
+  }
+
+  const streamUrl = id ? getStreamUrl(id) : ''
 
   return (
-    <div className="content-result">
-      <div className="content-result-header">
-        <h2 className="content-result-title">{content?.filename ?? 'Processing…'}</h2>
+    <div className="content-detail">
+      <Link to="/media" className="back-link">← Media Library</Link>
+
+      <div className="detail-header">
+        <h1 className="detail-title">{content?.filename ?? 'Loading…'}</h1>
         {content && (
-          <span className="content-result-meta">
+          <span className="detail-meta">
             {formatBytes(content.fileSize)}
             {content.duration != null && ` · ${formatDuration(content.duration)}`}
           </span>
@@ -66,7 +69,7 @@ function ContentResult({ contentId }: { contentId: string }) {
         key={streamUrl}
         src={streamUrl}
         controls
-        className="content-video"
+        className="detail-video"
         preload="metadata"
       />
 

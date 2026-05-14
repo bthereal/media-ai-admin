@@ -5,22 +5,29 @@ import './VideoUploader.css'
 interface VideoUploaderProps {
   endpoint: string
   headers?: Record<string, string>
+  onUploadComplete?: (contentId: string) => void
 }
 
-export default function VideoUploader({ endpoint, headers }: VideoUploaderProps) {
+export default function VideoUploader({ endpoint, headers, onUploadComplete }: VideoUploaderProps) {
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const previewUrlRef = useRef<string | null>(null)
-  const { status, progress, error, upload, cancel, reset } = useChunkedUpload()
+  const { status, progress, error, contentId, upload, cancel, reset } = useChunkedUpload()
 
   useEffect(() => {
     return () => {
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (status === 'complete' && contentId != null) {
+      onUploadComplete?.(contentId)
+    }
+  }, [status, contentId, onUploadComplete])
 
   function selectFile(selected: File) {
     if (selected.type !== 'video/mp4' && !selected.name.toLowerCase().endsWith('.mp4')) {

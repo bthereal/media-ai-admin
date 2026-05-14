@@ -33,6 +33,10 @@ export interface ChunkUploadSuccessResponse {
   uploadId: string
   /** 0-based index of the chunk just accepted */
   chunkIndex: number
+  /** UUID of the created Content record — only present on the final chunk after assembly */
+  contentId?: string
+  /** True when an identical file hash was already stored — no new transcription is dispatched */
+  duplicate?: boolean
 }
 
 /** Response body on error (HTTP 400 | 415 | 422 | 500) */

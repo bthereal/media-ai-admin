@@ -1,0 +1,157 @@
+.media-library {
+  max-width: 960px;
+}
+
+.media-library h1 {
+  margin: 0 0 24px;
+}
+
+.media-loading,
+.media-empty,
+.media-error {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.media-error {
+  color: var(--color-error);
+}
+
+.media-empty a {
+  color: var(--item-active-text);
+  text-decoration: none;
+}
+
+.media-empty a:hover {
+  text-decoration: underline;
+}
+
+/* Grid */
+
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+/* Card */
+
+.media-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.media-card:hover {
+  border-color: var(--item-active-text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.media-card-thumb {
+  aspect-ratio: 16 / 9;
+  background: var(--sidebar-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--border);
+}
+
+.media-card-thumb svg {
+  width: 40px;
+  height: 40px;
+}
+
+.media-card-body {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.media-card-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-h);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-card-meta {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Badges */
+
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 20px;
+  width: fit-content;
+  margin-top: 2px;
+}
+
+.badge-success {
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  color: var(--color-success);
+}
+
+.badge-error {
+  background: color-mix(in srgb, var(--color-error) 10%, transparent);
+  color: var(--color-error);
+}
+
+.badge-pending {
+  background: var(--item-hover);
+  color: var(--text);
+}
+
+/* Pagination */
+
+.media-pagination {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.media-page-info {
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* Shared button styles (mirrored from VideoUploader.css) */
+
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--item-hover);
+  color: var(--text-h);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

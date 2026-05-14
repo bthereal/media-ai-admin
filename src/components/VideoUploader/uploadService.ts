@@ -7,10 +7,16 @@ export interface ChunkUploadOptions {
   onProgress: (bytesUploaded: number, bytesTotal: number) => void
 }
 
-export async function uploadInChunks(file: File, options: ChunkUploadOptions): Promise<void> {
+export interface UploadResult {
+  /** UUID of the assembled Content record — set only on the final chunk */
+  contentId: string | undefined
+}
+
+export async function uploadInChunks(file: File, options: ChunkUploadOptions): Promise<UploadResult> {
   const { endpoint, headers = {}, signal, onProgress } = options
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
   const uploadId = crypto.randomUUID()
+  let contentId: string | undefined
 
   for (let index = 0; index < totalChunks; index++) {
     if (signal.aborted) throw new DOMException('Upload cancelled', 'AbortError')
@@ -43,6 +49,11 @@ export async function uploadInChunks(file: File, options: ChunkUploadOptions): P
       throw new Error(`Chunk ${index + 1}/${totalChunks} failed — ${res.status} ${res.statusText}`)
     }
 
+    const data = await res.json() as { ok: boolean; contentId?: string }
+    if (data.contentId) contentId = data.contentId
+
     onProgress(end, file.size)
   }
+
+  return { contentId }
 }
