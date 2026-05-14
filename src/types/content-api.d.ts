@@ -13,6 +13,8 @@ export interface ContentDto {
   ok: true
   /** UUID of the content record */
   id: string
+  /** User-defined title; null until set */
+  title: string | null
   /** Stored filename (e.g. "video.mp4") */
   filename: string
   /** UUID prefix used to locate the file in storage */
@@ -23,6 +25,8 @@ export interface ContentDto {
   fileSize: number
   /** Duration in seconds, null if ffprobe could not determine it */
   duration: number | null
+  /** Whether a JPEG thumbnail has been generated for this video */
+  hasThumbnail: boolean
   /** ISO 8601 creation timestamp */
   createdAt: string
   /** Attached transcription job, or null if none exists */

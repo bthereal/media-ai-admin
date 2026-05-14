@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { fetchContent, getStreamUrl } from '../services/contentApi'
+import { fetchContent, getStreamUrl, updateContentTitle } from '../services/contentApi'
 import type { ContentDto, TranscriptionDto } from '../types/content-api.d.ts'
 import './ContentDetail.css'
 
@@ -56,7 +56,10 @@ export default function ContentDetail() {
       <Link to="/media" className="back-link">← Media Library</Link>
 
       <div className="detail-header">
-        <h1 className="detail-title">{content?.filename ?? 'Loading…'}</h1>
+        {content
+          ? <TitleEditor content={content} onSave={updated => setContent(updated)} />
+          : <h1 className="detail-title">Loading…</h1>
+        }
         {content && (
           <span className="detail-meta">
             {formatBytes(content.fileSize)}
@@ -75,6 +78,70 @@ export default function ContentDetail() {
 
       <TranscriptionPanel transcription={content?.transcription ?? null} />
     </div>
+  )
+}
+
+function TitleEditor({ content, onSave }: { content: ContentDto; onSave: (updated: ContentDto) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(content.title ?? '')
+  const [saving, setSaving] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  function startEditing() {
+    setValue(content.title ?? '')
+    setEditing(true)
+    setTimeout(() => inputRef.current?.select(), 0)
+  }
+
+  function cancel() {
+    setEditing(false)
+  }
+
+  async function save() {
+    const trimmed = value.trim()
+    const next = trimmed === '' ? null : trimmed
+    if (next === content.title) { setEditing(false); return }
+    setSaving(true)
+    const updated = await updateContentTitle(content.id, next)
+    setSaving(false)
+    if (updated) { onSave(updated); setEditing(false) }
+  }
+
+  function onKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') void save()
+    if (e.key === 'Escape') cancel()
+  }
+
+  if (editing) {
+    return (
+      <div className="title-editor">
+        <input
+          ref={inputRef}
+          className="title-input"
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={onKeyDown}
+          maxLength={255}
+          placeholder={content.filename}
+          autoFocus
+        />
+        <button className="title-btn title-btn-save" onClick={() => void save()} disabled={saving}>
+          {saving ? '…' : 'Save'}
+        </button>
+        <button className="title-btn title-btn-cancel" onClick={cancel} disabled={saving}>
+          Cancel
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <button className="title-display" onClick={startEditing} title="Click to edit title">
+      <h1 className="detail-title">{content.title ?? content.filename}</h1>
+      <svg className="title-edit-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" />
+      </svg>
+    </button>
   )
 }
 

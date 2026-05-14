@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import VideoUploader from '../components/VideoUploader/VideoUploader'
+import { useAuth } from '../contexts/AuthContext'
 import { fetchContent, getStreamUrl } from '../services/contentApi'
 import type { ContentDto, TranscriptionDto } from '../types/content-api.d.ts'
 import './Uploads.css'
@@ -8,12 +9,14 @@ const UPLOAD_ENDPOINT = (import.meta.env.VITE_UPLOAD_ENDPOINT as string | undefi
 const POLL_INTERVAL_MS = 3000
 
 export default function Uploads() {
+  const { token } = useAuth()
   const [contentId, setContentId] = useState<string | null>(null)
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined
 
   return (
     <div className="uploads-page">
       <h1>Upload Video</h1>
-      <VideoUploader endpoint={UPLOAD_ENDPOINT} onUploadComplete={setContentId} />
+      <VideoUploader endpoint={UPLOAD_ENDPOINT} headers={headers} onUploadComplete={setContentId} />
       {contentId != null && <ContentResult key={contentId} contentId={contentId} />}
     </div>
   )

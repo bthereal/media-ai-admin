@@ -1,0 +1,41 @@
+.create-user-page {
+  max-width: 520px;
+}
+
+.create-user-subtitle {
+  font-size: 13px;
+  color: var(--text);
+  margin: -12px 0 24px;
+}
+
+.create-user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Reuse shared primitives defined in Login.css */
+/* (loaded globally via RootLayout or main.tsx) */
+
+.form-input-error {
+  border-color: var(--color-error) !important;
+}
+
+.form-hint {
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.7;
+  margin: 0;
+}
+
+.form-success {
+  font-size: 13px;
+  color: var(--color-success);
+  margin: 0;
+}

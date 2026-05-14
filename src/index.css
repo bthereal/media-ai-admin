@@ -61,3 +61,72 @@ h1 {
   margin: 0 0 24px;
   letter-spacing: -0.3px;
 }
+
+/* Shared form primitives */
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+.form-input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: var(--item-active-text);
+}
+
+.form-input::placeholder {
+  color: var(--text);
+  opacity: 0.5;
+}
+
+.form-error {
+  font-size: 13px;
+  color: var(--color-error);
+  margin: 0;
+}
+
+/* Shared button primitives */
+
+.btn-primary {
+  background: var(--item-active-text);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn-full {
+  width: 100%;
+}
