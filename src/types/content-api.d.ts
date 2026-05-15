@@ -4,6 +4,8 @@ export interface TranscriptionDto {
   status: 'pending' | 'processing' | 'completed' | 'failed'
   /** Transcribed text — null until status reaches 'completed' */
   text: string | null
+  /** AI-generated ≤200-char summary — null until embedding step completes */
+  summary: string | null
   /** ISO 8601 timestamp when transcription finished — null until completed */
   completedAt: string | null
 }
@@ -29,6 +31,8 @@ export interface ContentDto {
   hasThumbnail: boolean
   /** ISO 8601 creation timestamp */
   createdAt: string
+  /** ISO 8601 timestamp when archived; null if active */
+  deletedAt: string | null
   /** Attached transcription job, or null if none exists */
   transcription: TranscriptionDto | null
 }

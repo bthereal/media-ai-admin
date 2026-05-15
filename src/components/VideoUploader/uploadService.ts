@@ -1,3 +1,5 @@
+import { authFetch } from '../../lib/authFetch'
+
 export const CHUNK_SIZE = 2 * 1024 * 1024 // 2MB
 
 export interface ChunkUploadOptions {
@@ -32,7 +34,7 @@ export async function uploadInChunks(file: File, options: ChunkUploadOptions): P
     body.append('mimeType', file.type)
     body.append('chunk', file.slice(start, end))
 
-    const res = await fetch(endpoint, {
+    const res = await authFetch(endpoint, {
       method: 'POST',
       headers: {
         ...headers,

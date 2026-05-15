@@ -1,3 +1,4 @@
+import { authFetch, UnauthorizedError } from '../lib/authFetch'
 import { PASSPORT_BASE } from '../contexts/AuthContext'
 
 export interface CreateUserPayload {
@@ -26,7 +27,7 @@ export async function createUser(
   token: string,
 ): Promise<CreateUserResult | CreateUserError> {
   try {
-    const res = await fetch(`${PASSPORT_BASE}/api/user`, {
+    const res = await authFetch(`${PASSPORT_BASE}/api/user`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -52,7 +53,8 @@ export async function createUser(
     }
 
     return { ok: false, error: (data.message as string | undefined) ?? 'Failed to create user.' }
-  } catch {
+  } catch (err) {
+    if (err instanceof UnauthorizedError) throw err
     return { ok: false, error: 'Unable to connect to auth server.' }
   }
 }

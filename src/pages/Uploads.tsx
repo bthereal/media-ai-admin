@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import VideoUploader from '../components/VideoUploader/VideoUploader'
 import { useAuth } from '../contexts/AuthContext'
-import { fetchContent, getStreamUrl } from '../services/contentApi'
-import type { ContentDto, TranscriptionDto } from '../types/content-api.d.ts'
+import { fetchContent, getStreamUrl, updateContent } from '../services/contentApi'
+import type { ContentDto } from '../types/content-api.d.ts'
 import './Uploads.css'
 
 const UPLOAD_ENDPOINT = (import.meta.env.VITE_UPLOAD_ENDPOINT as string | undefined) ?? ''
@@ -16,15 +16,34 @@ export default function Uploads() {
   return (
     <div className="uploads-page">
       <h1>Upload Video</h1>
-      <VideoUploader endpoint={UPLOAD_ENDPOINT} headers={headers} onUploadComplete={setContentId} />
-      {contentId != null && <ContentResult key={contentId} contentId={contentId} />}
+      {contentId === null ? (
+        <VideoUploader
+          key="uploader"
+          endpoint={UPLOAD_ENDPOINT}
+          headers={headers}
+          onUploadComplete={setContentId}
+        />
+      ) : (
+        <PostUploadView
+          key={contentId}
+          contentId={contentId}
+          onReset={() => setContentId(null)}
+        />
+      )}
     </div>
   )
 }
 
-function ContentResult({ contentId }: { contentId: string }) {
+function PostUploadView({ contentId, onReset }: { contentId: string; onReset: () => void }) {
   const [content, setContent] = useState<ContentDto | null>(null)
+  const [titleInput, setTitleInput] = useState('')
+  const [summaryInput, setSummaryInput] = useState('')
+  const [transcriptOpen, setTranscriptOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const titleInitialized = useRef(false)
+  const summaryInitialized = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -32,13 +51,12 @@ function ContentResult({ contentId }: { contentId: string }) {
     async function poll() {
       const data = await fetchContent(contentId)
       if (cancelled) return
-      if (data) {
-        setContent(data)
-        const done = data.transcription?.status === 'completed' || data.transcription?.status === 'failed'
-        if (done && timerRef.current != null) {
-          clearInterval(timerRef.current)
-          timerRef.current = null
-        }
+      if (!data) return
+      setContent(data)
+      const done = data.transcription?.status === 'completed' || data.transcription?.status === 'failed'
+      if (done && timerRef.current != null) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
       }
     }
 
@@ -51,62 +69,126 @@ function ContentResult({ contentId }: { contentId: string }) {
     }
   }, [contentId])
 
-  const streamUrl = getStreamUrl(contentId)
+  // Auto-populate title and summary once they arrive from the API
+  useEffect(() => {
+    if (!content) return
+    if (!titleInitialized.current && content.title) {
+      setTitleInput(content.title)
+      titleInitialized.current = true
+    }
+    if (!summaryInitialized.current && content.transcription?.summary) {
+      setSummaryInput(content.transcription.summary)
+      summaryInitialized.current = true
+    }
+  }, [content])
+
+  async function handleSave() {
+    setSaving(true)
+    setSaveSuccess(false)
+    const updated = await updateContent(contentId, {
+      title: titleInput.trim() || null,
+      summary: summaryInput.trim() || null,
+    })
+    setSaving(false)
+    if (updated) {
+      setContent(updated)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 2500)
+    }
+  }
+
+  const transcription = content?.transcription ?? null
+  const transcriptReady = transcription?.status === 'completed'
 
   return (
-    <div className="content-result">
-      <div className="content-result-header">
-        <h2 className="content-result-title">{content?.filename ?? 'Processing…'}</h2>
-        {content && (
-          <span className="content-result-meta">
-            {formatBytes(content.fileSize)}
-            {content.duration != null && ` · ${formatDuration(content.duration)}`}
-          </span>
-        )}
-      </div>
-
+    <div className="post-upload">
       <video
-        key={streamUrl}
-        src={streamUrl}
+        src={getStreamUrl(contentId)}
         controls
-        className="content-video"
+        className="post-upload-video"
         preload="metadata"
       />
 
-      <TranscriptionPanel transcription={content?.transcription ?? null} />
-    </div>
-  )
-}
+      <div className="post-upload-form">
+        <div className="form-field">
+          <label className="form-label" htmlFor="pu-title">Title</label>
+          <input
+            id="pu-title"
+            className="form-input"
+            type="text"
+            maxLength={255}
+            placeholder={content?.filename ?? 'Loading…'}
+            value={titleInput}
+            onChange={e => setTitleInput(e.target.value)}
+          />
+        </div>
 
-function TranscriptionPanel({ transcription }: { transcription: TranscriptionDto | null }) {
-  if (transcription == null) {
-    return (
-      <div className="transcription-panel transcription-loading">
-        <Spinner /> Waiting for transcription…
+        <div className="form-field">
+          <label className="form-label" htmlFor="pu-summary">Summary</label>
+          <textarea
+            id="pu-summary"
+            className="form-input post-upload-summary"
+            maxLength={200}
+            rows={3}
+            placeholder={
+              transcription === null || transcription.status === 'pending' || transcription.status === 'processing'
+                ? 'Generating summary…'
+                : 'No summary generated'
+            }
+            value={summaryInput}
+            onChange={e => setSummaryInput(e.target.value)}
+          />
+          <span className="post-upload-charcount">{summaryInput.length}/200</span>
+        </div>
+
+        {transcriptReady && transcription.text && (
+          <div className="post-upload-transcript">
+            <button
+              type="button"
+              className="post-upload-transcript-toggle"
+              onClick={() => setTranscriptOpen(o => !o)}
+              aria-expanded={transcriptOpen}
+            >
+              <span>Transcript</span>
+              <svg
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+                className={`transcript-chevron${transcriptOpen ? ' transcript-chevron-open' : ''}`}
+              >
+                <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            </button>
+            {transcriptOpen && (
+              <p className="post-upload-transcript-text">{transcription.text}</p>
+            )}
+          </div>
+        )}
+
+        {!transcriptReady && transcription?.status !== 'failed' && (
+          <div className="post-upload-transcribing">
+            <Spinner />
+            {transcription === null || transcription.status === 'pending'
+              ? 'Waiting for transcription…'
+              : 'Transcribing audio…'}
+          </div>
+        )}
+
+        <div className="post-upload-actions">
+          <button type="button" className="btn-ghost" onClick={onReset}>
+            Upload another
+          </button>
+          {saveSuccess && <span className="post-upload-saved">Saved</span>}
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => void handleSave()}
+            disabled={saving}
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
       </div>
-    )
-  }
-
-  if (transcription.status === 'pending' || transcription.status === 'processing') {
-    return (
-      <div className="transcription-panel transcription-loading">
-        <Spinner /> Transcribing audio…
-      </div>
-    )
-  }
-
-  if (transcription.status === 'failed') {
-    return (
-      <div className="transcription-panel transcription-error">
-        Transcription failed. The video has been saved but no transcript is available.
-      </div>
-    )
-  }
-
-  return (
-    <div className="transcription-panel transcription-complete">
-      <h3 className="transcription-label">Transcript</h3>
-      <p className="transcription-text">{transcription.text}</p>
     </div>
   )
 }
@@ -119,16 +201,3 @@ function Spinner() {
   )
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
-}
-
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  return `${m}:${String(s).padStart(2, '0')}`
-}

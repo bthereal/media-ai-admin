@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { authFetch, TOKEN_KEY } from '../lib/authFetch'
 
-const TOKEN_KEY = 'content_admin_token'
 const PASSPORT_BASE = (import.meta.env.VITE_PASSPORT_ENDPOINT as string | undefined) ?? 'http://127.0.0.1:9000'
 
 export interface AuthUser {
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 async function fetchMe(jwt: string): Promise<AuthUser | null> {
   try {
-    const res = await fetch(`${PASSPORT_BASE}/api/auth/me`, {
+    const res = await authFetch(`${PASSPORT_BASE}/api/auth/me`, {
       headers: { Authorization: `Bearer ${jwt}` },
     })
     if (!res.ok) return null

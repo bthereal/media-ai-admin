@@ -53,6 +53,7 @@
 }
 
 .media-card-thumb {
+  position: relative;
   aspect-ratio: 16 / 9;
   background: var(--sidebar-bg);
   display: flex;
@@ -64,6 +65,46 @@
 .media-card-thumb svg {
   width: 40px;
   height: 40px;
+}
+
+.media-card-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  padding: 0;
+}
+
+.media-card-delete svg {
+  width: 15px;
+  height: 15px;
+}
+
+.media-card-delete:hover:not(:disabled) {
+  background: var(--color-error);
+}
+
+.media-card-delete:disabled {
+  cursor: default;
+}
+
+.media-card-delete-spinner {
+  animation: spin 1s linear infinite;
+}
+
+.media-card:hover .media-card-delete {
+  opacity: 1;
 }
 
 .media-card-thumb-img {
