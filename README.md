@@ -1,73 +1,69 @@
-# React + TypeScript + Vite
+# Content Admin
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A web-based admin panel for managing video content. Upload MP4 files, track processing status, edit metadata, and review AI-generated transcripts and summaries.
 
-Currently, two official plugins are available:
+## What it does
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+**Media Library** — browsable grid of all uploaded videos with thumbnails, file size, duration, and transcription status badges. Paginated. Searchable via the sidebar search button.
 
-## React Compiler
+**Video Upload** — drag-and-drop or file-picker upload of MP4 files. Files are sent in 2 MB chunks with a live progress bar. Cancellable mid-flight. On completion, drops straight into the metadata form.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**Metadata editing** — each video has an editable title and summary. After transcription completes, a one-click button generates a summary from the transcript. The full transcript is viewable in a collapsible panel.
 
-## Expanding the ESLint configuration
+**Transcription polling** — the detail and post-upload views poll the API every 3 seconds until transcription status reaches `completed` or `failed`, then stop.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+**Authentication** — JWT-based login via an external Passport service. Tokens are stored in `localStorage`. Any API response returning `401` clears the token and redirects to `/login` immediately.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+**Delete** — videos can be archived from either the media library grid (trashcan icon) or the individual video page (Delete button).
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Stack
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- React 19 · TypeScript 6 · Vite 8
+- React Router v7
+- No UI component library — plain CSS with CSS custom properties, automatic dark/light mode via `prefers-color-scheme`
+
+## External services
+
+The app talks to two backend services:
+
+| Service | Default | Purpose |
+|---|---|---|
+| Content API | `http://127.0.0.1:8000` | Upload, stream, transcode, transcribe, search |
+| Passport API | `http://127.0.0.1:9000` | JWT auth (`/api/auth/token`, `/api/auth/me`) |
+
+## Setup
+
+Copy `.env.development` and set the three variables:
+
+```
+VITE_UPLOAD_ENDPOINT=/api/upload/chunk
+VITE_CONTENT_ENDPOINT=/api/content
+VITE_PASSPORT_ENDPOINT=
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The Vite dev server proxies `/api/auth/*` → port 9000 and `/api/*` → port 8000, so relative paths avoid CORS entirely in development. For production, point the variables at the real API base URLs.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Commands
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm dev        # dev server with HMR at localhost:5173
+pnpm build      # type-check + production build → dist/
+pnpm lint       # ESLint across all .ts/.tsx
+pnpm preview    # serve the production build locally
 ```
+
+## Chunked upload protocol
+
+Each chunk is a `multipart/form-data` POST with the following fields:
+
+| Field | Description |
+|---|---|
+| `uploadId` | UUID shared across all chunks for a single file |
+| `chunkIndex` | 0-based chunk number |
+| `totalChunks` | Total number of chunks |
+| `filename` | Original filename |
+| `mimeType` | Always `video/mp4` |
+| `chunk` | The raw Blob slice |
+| `title` _(optional)_ | User-entered title, sent with every chunk |
+
+The same values are also sent as `x-upload-id`, `x-chunk-index`, `x-total-chunks`, and `x-filename` request headers for easier server-side logging. The final chunk response is expected to include `{ contentId: string }` so the UI can link to the new record.
