@@ -6,10 +6,12 @@ interface VideoUploaderProps {
   endpoint: string
   headers?: Record<string, string>
   onUploadComplete?: (contentId: string) => void
+  onFileSelected?: (file: File) => void
 }
 
-export default function VideoUploader({ endpoint, headers, onUploadComplete }: VideoUploaderProps) {
+export default function VideoUploader({ endpoint, headers, onUploadComplete, onFileSelected }: VideoUploaderProps) {
   const [file, setFile] = useState<File | null>(null)
+  const [title, setTitle] = useState('')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
@@ -40,7 +42,9 @@ export default function VideoUploader({ endpoint, headers, onUploadComplete }: V
     previewUrlRef.current = url
     setFile(selected)
     setPreviewUrl(url)
+    setTitle(selected.name.replace(/\.mp4$/i, ''))
     reset()
+    onFileSelected?.(selected)
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -59,6 +63,7 @@ export default function VideoUploader({ endpoint, headers, onUploadComplete }: V
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
     previewUrlRef.current = null
     setFile(null)
+    setTitle('')
     setPreviewUrl(null)
     setFileError(null)
     reset()
@@ -99,6 +104,21 @@ export default function VideoUploader({ endpoint, headers, onUploadComplete }: V
               <span className="file-size">{formatBytes(file.size)}</span>
             </div>
 
+            {status === 'idle' && (
+              <div className="upload-title-field">
+                <label className="upload-title-label" htmlFor="vu-title">Title</label>
+                <input
+                  id="vu-title"
+                  className="upload-title-input"
+                  type="text"
+                  maxLength={255}
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder={file.name.replace(/\.mp4$/i, '')}
+                />
+              </div>
+            )}
+
             {isUploading && (
               <div className="progress-track" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
                 <div className="progress-bar" style={{ width: `${progress}%` }} />
@@ -109,7 +129,7 @@ export default function VideoUploader({ endpoint, headers, onUploadComplete }: V
 
             <div className="upload-actions">
               {status === 'idle' && (
-                <button type="button" className="btn-primary" onClick={() => upload(file, endpoint, headers)}>
+                <button type="button" className="btn-primary" onClick={() => upload(file, endpoint, headers, title.trim() || undefined)}>
                   Upload
                 </button>
               )}

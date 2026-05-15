@@ -104,6 +104,39 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Title field */
+
+.upload-title-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.upload-title-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: 0.03em;
+}
+
+.upload-title-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 14px;
+  color: var(--text-h);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.upload-title-input:focus {
+  border-color: var(--item-active-text);
+}
+
 /* Progress bar */
 
 .progress-track {

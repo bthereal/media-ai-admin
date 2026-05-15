@@ -2,8 +2,32 @@
   max-width: 960px;
 }
 
-.media-library h1 {
+.media-library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin: 0 0 24px;
+}
+
+.media-library-header h1 {
+  margin: 0;
+}
+
+.btn-upload {
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+
+.btn-upload:hover {
+  opacity: 0.85;
 }
 
 .media-loading,

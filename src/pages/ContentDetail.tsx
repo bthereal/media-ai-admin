@@ -1,16 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router'
-import { fetchContent, getStreamUrl, updateContentTitle } from '../services/contentApi'
-import type { ContentDto, TranscriptionDto } from '../types/content-api.d.ts'
+import { Link, useNavigate, useParams } from 'react-router'
+import { deleteContent, fetchContent, generateSummary, getStreamUrl, updateContent } from '../services/contentApi'
+import type { ContentDto } from '../types/content-api.d.ts'
 import './ContentDetail.css'
 
 const POLL_INTERVAL_MS = 3000
 
 export default function ContentDetail() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [content, setContent] = useState<ContentDto | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [titleInput, setTitleInput] = useState('')
+  const [summaryInput, setSummaryInput] = useState('')
+  const [transcriptOpen, setTranscriptOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [generatingSummary, setGeneratingSummary] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const titleInitialized = useRef(false)
+  const summaryInitialized = useRef(false)
 
   useEffect(() => {
     if (!id) return
@@ -19,10 +29,7 @@ export default function ContentDetail() {
     async function poll() {
       const data = await fetchContent(id!)
       if (cancelled) return
-      if (data === null) {
-        setNotFound(true)
-        return
-      }
+      if (data === null) { setNotFound(true); return }
       setContent(data)
       const done = data.transcription?.status === 'completed' || data.transcription?.status === 'failed'
       if (done && timerRef.current != null) {
@@ -33,12 +40,61 @@ export default function ContentDetail() {
 
     void poll()
     timerRef.current = setInterval(() => void poll(), POLL_INTERVAL_MS)
-
     return () => {
       cancelled = true
       if (timerRef.current != null) clearInterval(timerRef.current)
     }
   }, [id])
+
+  useEffect(() => {
+    if (!content) return
+    if (!titleInitialized.current && content.title) {
+      setTitleInput(content.title)
+      titleInitialized.current = true
+    }
+    if (!summaryInitialized.current && content.transcription?.summary) {
+      setSummaryInput(content.transcription.summary)
+      summaryInitialized.current = true
+    }
+  }, [content])
+
+  async function handleSave() {
+    if (!id) return
+    setSaving(true)
+    setSaveSuccess(false)
+    const updated = await updateContent(id, {
+      title: titleInput.trim() || null,
+      summary: summaryInput.trim() || null,
+    })
+    setSaving(false)
+    if (updated) {
+      setContent(updated)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 2500)
+    }
+  }
+
+  async function handleGenerateSummary() {
+    if (!id) return
+    setGeneratingSummary(true)
+    const updated = await generateSummary(id)
+    setGeneratingSummary(false)
+    if (updated?.transcription?.summary) {
+      setSummaryInput(updated.transcription.summary)
+      setContent(updated)
+    }
+  }
+
+  async function handleDelete() {
+    if (!id) return
+    setDeleting(true)
+    const ok = await deleteContent(id)
+    if (ok) {
+      void navigate('/media', { replace: true })
+    } else {
+      setDeleting(false)
+    }
+  }
 
   if (notFound) {
     return (
@@ -49,24 +105,13 @@ export default function ContentDetail() {
     )
   }
 
+  const transcription = content?.transcription ?? null
+  const transcriptReady = transcription?.status === 'completed'
   const streamUrl = id ? getStreamUrl(id) : ''
 
   return (
     <div className="content-detail">
       <Link to="/media" className="back-link">← Media Library</Link>
-
-      <div className="detail-header">
-        {content
-          ? <TitleEditor content={content} onSave={updated => setContent(updated)} />
-          : <h1 className="detail-title">Loading…</h1>
-        }
-        {content && (
-          <span className="detail-meta">
-            {formatBytes(content.fileSize)}
-            {content.duration != null && ` · ${formatDuration(content.duration)}`}
-          </span>
-        )}
-      </div>
 
       <video
         key={streamUrl}
@@ -76,104 +121,108 @@ export default function ContentDetail() {
         preload="metadata"
       />
 
-      <TranscriptionPanel transcription={content?.transcription ?? null} />
-    </div>
-  )
-}
+      <div className="detail-form">
+        <div className="form-field">
+          <label className="form-label" htmlFor="cd-title">Title</label>
+          <input
+            id="cd-title"
+            className="form-input"
+            type="text"
+            maxLength={255}
+            placeholder={content?.filename ?? 'Loading…'}
+            value={titleInput}
+            onChange={e => setTitleInput(e.target.value)}
+          />
+        </div>
 
-function TitleEditor({ content, onSave }: { content: ContentDto; onSave: (updated: ContentDto) => void }) {
-  const [editing, setEditing] = useState(false)
-  const [value, setValue] = useState(content.title ?? '')
-  const [saving, setSaving] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+        <div className="form-field">
+          <div className="detail-summary-header">
+            <label className="form-label" htmlFor="cd-summary">Summary</label>
+            {transcriptReady && (
+              <button
+                type="button"
+                className="detail-generate-btn"
+                onClick={() => void handleGenerateSummary()}
+                disabled={generatingSummary}
+                title="Generate summary from transcript"
+              >
+                {generatingSummary ? <SpinnerIcon /> : <RegenerateIcon />}
+              </button>
+            )}
+          </div>
+          <textarea
+            id="cd-summary"
+            className="form-input detail-summary"
+            maxLength={200}
+            rows={3}
+            placeholder={
+              !transcriptReady
+                ? (transcription === null || transcription.status === 'pending' || transcription.status === 'processing'
+                    ? 'Waiting for transcription…'
+                    : 'Transcription failed')
+                : 'Click ↺ to generate a summary from the transcript'
+            }
+            value={summaryInput}
+            onChange={e => setSummaryInput(e.target.value)}
+          />
+          <span className="detail-charcount">{summaryInput.length}/200</span>
+        </div>
 
-  function startEditing() {
-    setValue(content.title ?? '')
-    setEditing(true)
-    setTimeout(() => inputRef.current?.select(), 0)
-  }
+        {transcriptReady && transcription.text && (
+          <div className="detail-transcript">
+            <button
+              type="button"
+              className="detail-transcript-toggle"
+              onClick={() => setTranscriptOpen(o => !o)}
+              aria-expanded={transcriptOpen}
+            >
+              <span>Transcript</span>
+              <svg
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+                className={`detail-chevron${transcriptOpen ? ' detail-chevron-open' : ''}`}
+              >
+                <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            </button>
+            {transcriptOpen && (
+              <p className="detail-transcript-text">{transcription.text}</p>
+            )}
+          </div>
+        )}
 
-  function cancel() {
-    setEditing(false)
-  }
+        {!transcriptReady && transcription?.status !== 'failed' && (
+          <div className="detail-transcribing">
+            <Spinner />
+            {transcription === null || transcription.status === 'pending'
+              ? 'Waiting for transcription…'
+              : 'Transcribing audio…'}
+          </div>
+        )}
 
-  async function save() {
-    const trimmed = value.trim()
-    const next = trimmed === '' ? null : trimmed
-    if (next === content.title) { setEditing(false); return }
-    setSaving(true)
-    const updated = await updateContentTitle(content.id, next)
-    setSaving(false)
-    if (updated) { onSave(updated); setEditing(false) }
-  }
-
-  function onKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') void save()
-    if (e.key === 'Escape') cancel()
-  }
-
-  if (editing) {
-    return (
-      <div className="title-editor">
-        <input
-          ref={inputRef}
-          className="title-input"
-          value={value}
-          onChange={e => setValue(e.target.value)}
-          onKeyDown={onKeyDown}
-          maxLength={255}
-          placeholder={content.filename}
-          autoFocus
-        />
-        <button className="title-btn title-btn-save" onClick={() => void save()} disabled={saving}>
-          {saving ? '…' : 'Save'}
-        </button>
-        <button className="title-btn title-btn-cancel" onClick={cancel} disabled={saving}>
-          Cancel
-        </button>
+        <div className="detail-actions">
+          <button
+            type="button"
+            className="btn-delete"
+            onClick={() => void handleDelete()}
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting…' : 'Delete'}
+          </button>
+          <div className="detail-actions-right">
+            {saveSuccess && <span className="detail-saved">Saved</span>}
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => void handleSave()}
+              disabled={saving || !content}
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
       </div>
-    )
-  }
-
-  return (
-    <button className="title-display" onClick={startEditing} title="Click to edit title">
-      <h1 className="detail-title">{content.title ?? content.filename}</h1>
-      <svg className="title-edit-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-        <path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" />
-      </svg>
-    </button>
-  )
-}
-
-function TranscriptionPanel({ transcription }: { transcription: TranscriptionDto | null }) {
-  if (transcription == null) {
-    return (
-      <div className="transcription-panel transcription-loading">
-        <Spinner /> Waiting for transcription…
-      </div>
-    )
-  }
-
-  if (transcription.status === 'pending' || transcription.status === 'processing') {
-    return (
-      <div className="transcription-panel transcription-loading">
-        <Spinner /> Transcribing audio…
-      </div>
-    )
-  }
-
-  if (transcription.status === 'failed') {
-    return (
-      <div className="transcription-panel transcription-error">
-        Transcription failed. The video has been saved but no transcript is available.
-      </div>
-    )
-  }
-
-  return (
-    <div className="transcription-panel transcription-complete">
-      <h3 className="transcription-label">Transcript</h3>
-      <p className="transcription-text">{transcription.text}</p>
     </div>
   )
 }
@@ -186,16 +235,18 @@ function Spinner() {
   )
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+function RegenerateIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+    </svg>
+  )
 }
 
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  return `${m}:${String(s).padStart(2, '0')}`
+function SpinnerIcon() {
+  return (
+    <svg className="detail-generate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" />
+    </svg>
+  )
 }

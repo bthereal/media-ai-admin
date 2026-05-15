@@ -60,6 +60,17 @@ export async function updateContentTitle(id: string, title: string | null): Prom
   }
 }
 
+export async function generateSummary(id: string): Promise<ContentDto | null> {
+  try {
+    const res = await authFetch(`${CONTENT_BASE}/${id}/summarize`, { method: 'POST' })
+    if (!res.ok) return null
+    return (await res.json()) as ContentDto
+  } catch (err) {
+    if (err instanceof UnauthorizedError) throw err
+    return null
+  }
+}
+
 export async function deleteContent(id: string): Promise<boolean> {
   try {
     const res = await authFetch(`${CONTENT_BASE}/${id}`, { method: 'DELETE' })
@@ -75,4 +86,31 @@ export function getStreamUrl(id: string): string {
 
 export function getThumbnailUrl(id: string): string {
   return `${CONTENT_BASE}/${id}/thumbnail`
+}
+
+export interface SearchVideoResult {
+  id: string
+  title: string | null
+  summary: string | null
+}
+
+export interface SearchResult {
+  answer: string
+  videos: SearchVideoResult[]
+}
+
+export async function searchContent(query: string): Promise<SearchResult | null> {
+  try {
+    const res = await authFetch(`${CONTENT_BASE}/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    })
+    if (!res.ok) return null
+    const data = (await res.json()) as { ok: boolean; answer?: string; videos?: SearchVideoResult[] }
+    return data.ok && data.answer ? { answer: data.answer, videos: data.videos ?? [] } : null
+  } catch (err) {
+    if (err instanceof UnauthorizedError) throw err
+    return null
+  }
 }

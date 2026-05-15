@@ -15,12 +15,41 @@
 }
 
 .sidebar-logo {
-  padding: 20px 16px;
+  padding: 14px 16px;
   font-weight: 600;
   font-size: 15px;
   color: var(--text-h);
   border-bottom: 1px solid var(--border);
   letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-search-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text);
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebar-search-btn:hover {
+  background: var(--item-hover);
+  color: var(--item-active-text);
+}
+
+.sidebar-search-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .nav-links {

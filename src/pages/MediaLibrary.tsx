@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { deleteContent, fetchContentList, getThumbnailUrl } from '../services/contentApi'
 import type { ContentDto, ContentListDto } from '../types/content-api.d.ts'
 import './MediaLibrary.css'
 
 export default function MediaLibrary() {
+  const navigate = useNavigate()
   const [result, setResult] = useState<ContentListDto | null>(null)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -32,7 +33,12 @@ export default function MediaLibrary() {
 
   return (
     <div className="media-library">
-      <h1>Media Library</h1>
+      <div className="media-library-header">
+        <h1>Media Library</h1>
+        <button type="button" className="btn-upload" onClick={() => void navigate('/uploads')}>
+          Upload
+        </button>
+      </div>
 
       {loading && <p className="media-loading">Loading…</p>}
 
@@ -43,7 +49,7 @@ export default function MediaLibrary() {
       {!loading && !error && result && (
         <>
           {result.items.length === 0 ? (
-            <p className="media-empty">No videos uploaded yet. <Link to="/uploads">Upload one?</Link></p>
+            <p className="media-empty">No videos uploaded yet.</p>
           ) : (
             <div className="media-grid">
               {result.items.map(item => (

@@ -1,0 +1,360 @@
+/* Backdrop */
+.sp-backdrop {
+  position: fixed;
+  inset: 0 0 0 220px;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.sp-backdrop-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Panel */
+.search-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: calc((100vw - 220px) * 0.75);
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.search-panel-open {
+  transform: translateX(0);
+}
+
+/* Header */
+.sp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sp-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+  letter-spacing: -0.1px;
+}
+
+.sp-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.15s, color 0.15s;
+  padding: 0;
+}
+
+.sp-close:hover {
+  background: var(--item-hover);
+  color: var(--text-h);
+}
+
+.sp-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Body */
+.sp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Input row */
+.sp-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.sp-input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--sidebar-bg);
+  color: var(--text-h);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.sp-input:focus {
+  border-color: var(--item-active-text);
+}
+
+.sp-input:disabled {
+  opacity: 0.6;
+}
+
+.sp-search-btn {
+  background: var(--item-active-text);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sp-search-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.sp-search-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Suggestions */
+.sp-suggestions-label {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.sp-suggestions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sp-suggestion {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-h);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.sp-suggestion:hover {
+  background: var(--item-hover);
+  border-color: var(--item-active-text);
+}
+
+/* Loading */
+.sp-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text);
+  padding: 8px 0;
+}
+
+/* Error */
+.sp-error {
+  font-size: 13px;
+  color: var(--color-error);
+  padding: 8px 0;
+}
+
+/* Result */
+.sp-result {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Video cards */
+.sp-video-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sp-video-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.sp-video-card:hover {
+  border-color: var(--item-active-text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.sp-video-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--item-active-text);
+}
+
+.sp-video-card-summary {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Markdown answer */
+.sp-answer {
+  padding: 16px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.sp-markdown {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-h);
+}
+
+.sp-markdown h1,
+.sp-markdown h2,
+.sp-markdown h3 {
+  margin: 0 0 8px;
+  color: var(--text-h);
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.sp-markdown h1 { font-size: 17px; }
+.sp-markdown h2 { font-size: 15px; }
+.sp-markdown h3 { font-size: 14px; }
+
+.sp-markdown p {
+  margin: 0 0 10px;
+}
+
+.sp-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.sp-markdown ul {
+  margin: 0 0 10px;
+  padding-left: 20px;
+}
+
+.sp-markdown li {
+  margin-bottom: 4px;
+}
+
+.sp-markdown strong {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.sp-markdown em {
+  font-style: italic;
+}
+
+.sp-markdown code {
+  font-family: var(--mono, monospace);
+  font-size: 12px;
+  background: var(--item-hover);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.sp-markdown a {
+  color: var(--item-active-text);
+  text-decoration: none;
+}
+
+.sp-markdown a:hover {
+  text-decoration: underline;
+}
+
+.sp-markdown br {
+  display: block;
+  content: '';
+  margin-top: 6px;
+}
+
+/* Result footer */
+.sp-result-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sp-reset {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.sp-reset:hover {
+  background: var(--item-hover);
+  color: var(--text-h);
+  border-color: var(--item-active-text);
+}
+
+/* Spinner */
+.sp-spinner {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  animation: sp-spin 1s linear infinite;
+  color: currentColor;
+}
+
+@keyframes sp-spin {
+  to { transform: rotate(360deg); }
+}

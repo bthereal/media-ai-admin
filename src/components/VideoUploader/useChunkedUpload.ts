@@ -11,7 +11,7 @@ interface UploadState {
 }
 
 export interface UseChunkedUploadReturn extends UploadState {
-  upload: (file: File, endpoint: string, headers?: Record<string, string>) => Promise<void>
+  upload: (file: File, endpoint: string, headers?: Record<string, string>, title?: string) => Promise<void>
   cancel: () => void
   reset: () => void
 }
@@ -24,6 +24,7 @@ export function useChunkedUpload(): UseChunkedUploadReturn {
     file: File,
     endpoint: string,
     headers?: Record<string, string>,
+    title?: string,
   ) => {
     abortRef.current?.abort()
     const controller = new AbortController()
@@ -35,6 +36,7 @@ export function useChunkedUpload(): UseChunkedUploadReturn {
       const { contentId } = await uploadInChunks(file, {
         endpoint,
         headers,
+        title,
         signal: controller.signal,
         onProgress: (uploaded, total) => {
           setState(prev => ({ ...prev, progress: Math.round((uploaded / total) * 100) }))

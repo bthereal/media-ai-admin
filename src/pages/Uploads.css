@@ -24,6 +24,49 @@
 
 /* Form fields */
 
+.post-upload-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.post-upload-generate-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text);
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.post-upload-generate-btn:hover:not(:disabled) {
+  color: var(--item-active-text);
+  background: var(--item-hover);
+}
+
+.post-upload-generate-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.post-upload-generate-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.post-upload-generate-spin {
+  width: 15px;
+  height: 15px;
+  animation: spin 1s linear infinite;
+  color: var(--item-active-text);
+}
+
 .post-upload-form {
   display: flex;
   flex-direction: column;

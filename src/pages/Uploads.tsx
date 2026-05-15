@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import VideoUploader from '../components/VideoUploader/VideoUploader'
 import { useAuth } from '../contexts/AuthContext'
-import { fetchContent, getStreamUrl, updateContent } from '../services/contentApi'
+import { fetchContent, generateSummary, getStreamUrl, updateContent } from '../services/contentApi'
 import type { ContentDto } from '../types/content-api.d.ts'
 import './Uploads.css'
 
@@ -41,6 +41,7 @@ function PostUploadView({ contentId, onReset }: { contentId: string; onReset: ()
   const [transcriptOpen, setTranscriptOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [generatingSummary, setGeneratingSummary] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const titleInitialized = useRef(false)
   const summaryInitialized = useRef(false)
@@ -69,7 +70,6 @@ function PostUploadView({ contentId, onReset }: { contentId: string; onReset: ()
     }
   }, [contentId])
 
-  // Auto-populate title and summary once they arrive from the API
   useEffect(() => {
     if (!content) return
     if (!titleInitialized.current && content.title) {
@@ -94,6 +94,16 @@ function PostUploadView({ contentId, onReset }: { contentId: string; onReset: ()
       setContent(updated)
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 2500)
+    }
+  }
+
+  async function handleGenerateSummary() {
+    setGeneratingSummary(true)
+    const updated = await generateSummary(contentId)
+    setGeneratingSummary(false)
+    if (updated?.transcription?.summary) {
+      setSummaryInput(updated.transcription.summary)
+      setContent(updated)
     }
   }
 
@@ -124,16 +134,33 @@ function PostUploadView({ contentId, onReset }: { contentId: string; onReset: ()
         </div>
 
         <div className="form-field">
-          <label className="form-label" htmlFor="pu-summary">Summary</label>
+          <div className="post-upload-summary-header">
+            <label className="form-label" htmlFor="pu-summary">Summary</label>
+            {transcriptReady && (
+              <button
+                type="button"
+                className="post-upload-generate-btn"
+                onClick={() => void handleGenerateSummary()}
+                disabled={generatingSummary}
+                title="Generate summary from transcript"
+              >
+                {generatingSummary
+                  ? <SpinnerIcon className="post-upload-generate-spin" />
+                  : <RegenerateIcon />}
+              </button>
+            )}
+          </div>
           <textarea
             id="pu-summary"
             className="form-input post-upload-summary"
             maxLength={200}
             rows={3}
             placeholder={
-              transcription === null || transcription.status === 'pending' || transcription.status === 'processing'
-                ? 'Generating summary…'
-                : 'No summary generated'
+              !transcriptReady
+                ? (transcription === null || transcription.status === 'pending' || transcription.status === 'processing'
+                    ? 'Waiting for transcription…'
+                    : 'Transcription failed')
+                : 'Click ↺ to generate a summary from the transcript'
             }
             value={summaryInput}
             onChange={e => setSummaryInput(e.target.value)}
@@ -167,7 +194,7 @@ function PostUploadView({ contentId, onReset }: { contentId: string; onReset: ()
 
         {!transcriptReady && transcription?.status !== 'failed' && (
           <div className="post-upload-transcribing">
-            <Spinner />
+            <SpinnerIcon className="spinner" />
             {transcription === null || transcription.status === 'pending'
               ? 'Waiting for transcription…'
               : 'Transcribing audio…'}
@@ -193,11 +220,18 @@ function PostUploadView({ contentId, onReset }: { contentId: string; onReset: ()
   )
 }
 
-function Spinner() {
+function RegenerateIcon() {
   return (
-    <svg className="spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" />
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
     </svg>
   )
 }
 
+function SpinnerIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4" strokeDashoffset="10" />
+    </svg>
+  )
+}
