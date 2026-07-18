@@ -2,6 +2,7 @@
 
 A web-based admin panel for managing video content. Upload MP4 files, track processing status, edit metadata, and review AI-generated transcripts and summaries.
 
+
 ## What it does
 
 **Media Library** — browsable grid of all uploaded videos with thumbnails, file size, duration, and transcription status badges. Paginated. Searchable via the sidebar search button.
@@ -12,7 +13,7 @@ A web-based admin panel for managing video content. Upload MP4 files, track proc
 
 **Transcription polling** — the detail and post-upload views poll the API every 3 seconds until transcription status reaches `completed` or `failed`, then stop.
 
-**Authentication** — JWT-based login via an external Passport service. Tokens are stored in `localStorage`. Any API response returning `401` clears the token and redirects to `/login` immediately.
+**Authentication** — JWT-based login via an external Api  service. Tokens are stored in `localStorage`. Any API response returning `401` clears the token and redirects to `/login` immediately.
 
 **Delete** — videos can be archived from either the media library grid (trashcan icon) or the individual video page (Delete button).
 
@@ -22,15 +23,6 @@ A web-based admin panel for managing video content. Upload MP4 files, track proc
 - React Router v7
 - No UI component library — plain CSS with CSS custom properties, automatic dark/light mode via `prefers-color-scheme`
 
-## External services
-
-The app talks to two backend services:
-
-| Service | Default | Purpose |
-|---|---|---|
-| Content API | `http://127.0.0.1:8000` | Upload, stream, transcode, transcribe, search |
-| Passport API | `http://127.0.0.1:9000` | JWT auth (`/api/auth/token`, `/api/auth/me`) |
-
 ## Setup
 
 Copy `.env.development` and set the three variables:
@@ -38,10 +30,10 @@ Copy `.env.development` and set the three variables:
 ```
 VITE_UPLOAD_ENDPOINT=/api/upload/chunk
 VITE_CONTENT_ENDPOINT=/api/content
-VITE_PASSPORT_ENDPOINT=
+CONTENT_API_BASE=http://127.0.0.1:8080
 ```
 
-The Vite dev server proxies `/api/auth/*` → port 9000 and `/api/*` → port 8000, so relative paths avoid CORS entirely in development. For production, point the variables at the real API base URLs.
+The Vite dev server proxies `/api/auth/*` and `/api/*` → port 8080, so relative paths avoid CORS entirely in development. For production, point the variables at the real API base URLs.
 
 ## Commands
 

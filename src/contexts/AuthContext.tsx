@@ -1,8 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { authFetch, TOKEN_KEY } from '../lib/authFetch'
 
-const PASSPORT_BASE = (import.meta.env.VITE_PASSPORT_ENDPOINT as string | undefined) ?? 'http://127.0.0.1:9000'
-
 export interface AuthUser {
   id: string
   email: string
@@ -40,10 +38,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email: string, password: string): Promise<string | null> => {
     try {
-      const res = await fetch(`${PASSPORT_BASE}/api/auth/token`, {
+      const res = await fetch('/api/auth/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, tenant: 'content-admin' }),
+        body: JSON.stringify({ email, password }),
       })
       const data = await res.json() as Record<string, unknown>
       if (!res.ok) {
@@ -56,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(me)
       return null
     } catch {
-      return 'Unable to connect to auth server.'
+      return 'Unable to connect to the API.'
     }
   }, [])
 
@@ -75,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 async function fetchMe(jwt: string): Promise<AuthUser | null> {
   try {
-    const res = await authFetch(`${PASSPORT_BASE}/api/auth/me`, {
+    const res = await authFetch('/api/auth/me', {
       headers: { Authorization: `Bearer ${jwt}` },
     })
     if (!res.ok) return null
@@ -98,5 +96,3 @@ export function useAuth(): AuthContextValue {
   if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
   return ctx
 }
-
-export { PASSPORT_BASE }

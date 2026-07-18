@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { createUser } from '../services/passportApi'
+import { createUser } from '../services/userApi'
 import './CreateUser.css'
 
 interface FormState {
