@@ -2,8 +2,6 @@
 
 A web-based admin panel for managing video content. Upload MP4 files, track processing status, edit metadata, and review AI-generated transcripts and summaries.
 
-https://github.com/user-attachments/assets/67fb6551-8090-4e81-a0f9-834416de3e30
-
 ## What it does
 
 **Media Library** — browsable grid of all uploaded videos with thumbnails, file size, duration, and transcription status badges. Paginated. Searchable via the sidebar search button.
