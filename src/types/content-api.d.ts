@@ -1,3 +1,25 @@
+/** An AI-generated chapter marker */
+export interface ChapterDto {
+  title: string
+  startSeconds: number
+  endSeconds: number
+}
+
+/** A selectable caption language */
+export interface LanguageOptionDto {
+  /** ISO 639-1 code, e.g. "es" */
+  code: string
+  label: string
+}
+
+/** Caption availability for a video — null until transcription completes with timed segments */
+export interface CaptionsInfoDto {
+  /** Always available — served directly from stored segments, no AI call */
+  nativeLanguage: LanguageOptionDto
+  /** Curated set of languages that can be requested — translated and cached on first request */
+  availableTranslations: LanguageOptionDto[]
+}
+
 /** Transcription record attached to a Content item */
 export interface TranscriptionDto {
   /** Processing stage of the transcription job */
@@ -8,6 +30,10 @@ export interface TranscriptionDto {
   summary: string | null
   /** ISO 8601 timestamp when transcription finished — null until completed */
   completedAt: string | null
+  /** AI-generated chapters — null until the post-transcription chapter step has run, empty if it ran but produced none */
+  chapters: ChapterDto[] | null
+  /** Caption/subtitle availability — null until transcription has completed with timed segments */
+  captions: CaptionsInfoDto | null
 }
 
 /** Full content record returned by GET /api/content/{id} */

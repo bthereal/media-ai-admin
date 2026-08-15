@@ -9,6 +9,8 @@
   --item-active-text: #7c3aed;
   --color-success: #16a34a;
   --color-error: #dc2626;
+  --chart-accent: #7c3aed;
+  --chart-accent-wash: rgba(124, 58, 237, 0.1);
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
@@ -35,6 +37,8 @@
     --item-active-text: #c084fc;
     --color-success: #4ade80;
     --color-error: #f87171;
+    --chart-accent: #a970f0;
+    --chart-accent-wash: rgba(169, 112, 240, 0.15);
   }
 }
 
@@ -129,6 +133,78 @@ h1 {
 
 .btn-full {
   width: 100%;
+}
+
+/* Shared stat-tile / chart-card primitives */
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-tile {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+  background: var(--sidebar-bg);
+}
+
+.stat-tile-label {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.stat-tile-value {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-h);
+  letter-spacing: -0.3px;
+}
+
+.chart-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.chart-card-title {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.chart-tooltip {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.chart-tooltip-value {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.chart-tooltip-label {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.chart-tooltip-secondary {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.75;
 }
 
 .media-card-thumb {

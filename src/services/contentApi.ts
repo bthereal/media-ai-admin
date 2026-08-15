@@ -84,8 +84,24 @@ export function getStreamUrl(id: string): string {
   return `${CONTENT_BASE}/${id}/stream`
 }
 
-export function getThumbnailUrl(id: string): string {
-  return `${CONTENT_BASE}/${id}/thumbnail`
+export function getThumbnailUrl(id: string, cacheBust?: number): string {
+  const base = `${CONTENT_BASE}/${id}/thumbnail`
+  return cacheBust != null ? `${base}?v=${cacheBust}` : base
+}
+
+export function getCaptionsUrl(id: string, langCode: string): string {
+  return `${CONTENT_BASE}/${id}/captions/${langCode}.vtt`
+}
+
+export async function regenerateThumbnail(id: string): Promise<ContentDto | null> {
+  try {
+    const res = await authFetch(`${CONTENT_BASE}/${id}/thumbnail`, { method: 'POST' })
+    if (!res.ok) return null
+    return (await res.json()) as ContentDto
+  } catch (err) {
+    if (err instanceof UnauthorizedError) throw err
+    return null
+  }
 }
 
 export interface SearchVideoResult {

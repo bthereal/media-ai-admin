@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { deleteContent, fetchContent, generateSummary, getStreamUrl, updateContent } from '../services/contentApi'
-import type { ContentDto } from '../types/content-api.d.ts'
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { usePlaybackTracking } from '../hooks/usePlaybackTracking'
+import { fetchProgress, fetchVideoAnalytics } from '../services/analyticsApi'
+import { deleteContent, fetchContent, generateSummary, getCaptionsUrl, getStreamUrl, getThumbnailUrl, regenerateThumbnail, updateContent } from '../services/contentApi'
+import type { RetentionPointDto, VideoAnalyticsDto } from '../types/analytics-api.d.ts'
+import type { ChapterDto, ContentDto, LanguageOptionDto } from '../types/content-api.d.ts'
 import './ContentDetail.css'
 
 const POLL_INTERVAL_MS = 3000
+// After transcription completes, chapters generate as a separate async step — keep
+// polling a little longer for them before giving up (chapters are enhancement-only).
+const MAX_CHAPTER_WAIT_POLLS = 20
 
 export default function ContentDetail() {
   const { id } = useParams<{ id: string }>()
@@ -18,20 +25,73 @@ export default function ContentDetail() {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [generatingSummary, setGeneratingSummary] = useState(false)
+  const [regeneratingThumbnail, setRegeneratingThumbnail] = useState(false)
+  const [thumbnailVersion, setThumbnailVersion] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const titleInitialized = useRef(false)
   const summaryInitialized = useRef(false)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [analytics, setAnalytics] = useState<VideoAnalyticsDto | null>(null)
+  const [resumePosition, setResumePosition] = useState<number | null>(null)
+  const [showResumePrompt, setShowResumePrompt] = useState(false)
+  const [activeTranslations, setActiveTranslations] = useState<string[]>([])
+  const [activeTranslationsId, setActiveTranslationsId] = useState(id)
+  if (id !== activeTranslationsId) {
+    setActiveTranslationsId(id)
+    setActiveTranslations([])
+  }
+
+  usePlaybackTracking(id, videoRef)
 
   useEffect(() => {
     if (!id) return
     let cancelled = false
+    fetchVideoAnalytics(id).then(data => {
+      if (!cancelled) setAnalytics(data)
+    })
+    return () => { cancelled = true }
+  }, [id])
+
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    fetchProgress(id).then(position => {
+      if (cancelled) return
+      setResumePosition(position)
+      setShowResumePrompt(position != null)
+    })
+    return () => { cancelled = true }
+  }, [id])
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    const onPlay = () => setShowResumePrompt(false)
+    video.addEventListener('play', onPlay)
+    return () => video.removeEventListener('play', onPlay)
+  }, [id])
+
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    let chapterWaitPolls = 0
 
     async function poll() {
       const data = await fetchContent(id!)
       if (cancelled) return
       if (data === null) { setNotFound(true); return }
       setContent(data)
-      const done = data.transcription?.status === 'completed' || data.transcription?.status === 'failed'
+
+      const failed = data.transcription?.status === 'failed'
+      const completed = data.transcription?.status === 'completed'
+      const chaptersReady = data.transcription?.chapters != null
+      let done = failed || (completed && chaptersReady)
+
+      if (completed && !chaptersReady) {
+        chapterWaitPolls += 1
+        if (chapterWaitPolls >= MAX_CHAPTER_WAIT_POLLS) done = true
+      }
+
       if (done && timerRef.current != null) {
         clearInterval(timerRef.current)
         timerRef.current = null
@@ -85,6 +145,50 @@ export default function ContentDetail() {
     }
   }
 
+  async function handleRegenerateThumbnail() {
+    if (!id) return
+    setRegeneratingThumbnail(true)
+    const updated = await regenerateThumbnail(id)
+    setRegeneratingThumbnail(false)
+    if (updated) {
+      setContent(updated)
+      setThumbnailVersion(Date.now())
+    }
+  }
+
+  function seekTo(seconds: number, play = false) {
+    const video = videoRef.current
+    if (!video) return
+    const apply = () => {
+      video.currentTime = seconds
+      if (play) void video.play()
+    }
+    if (video.readyState >= 1) {
+      apply()
+    } else {
+      video.addEventListener('loadedmetadata', apply, { once: true })
+    }
+  }
+
+  function handleResume() {
+    if (resumePosition == null) return
+    seekTo(resumePosition)
+    setShowResumePrompt(false)
+  }
+
+  function handleDismissResume() {
+    setShowResumePrompt(false)
+  }
+
+  function handleChapterClick(startSeconds: number) {
+    seekTo(startSeconds, true)
+    setShowResumePrompt(false)
+  }
+
+  function handleAddCaptionLanguage(code: string) {
+    setActiveTranslations(prev => (prev.includes(code) ? prev : [...prev, code]))
+  }
+
   async function handleDelete() {
     if (!id) return
     setDeleting(true)
@@ -115,13 +219,90 @@ export default function ContentDetail() {
 
       <video
         key={streamUrl}
+        ref={videoRef}
         src={streamUrl}
         controls
         className="detail-video"
         preload="metadata"
-      />
+      >
+        {id && content?.transcription?.captions && (
+          <track
+            key={content.transcription.captions.nativeLanguage.code}
+            kind="subtitles"
+            src={getCaptionsUrl(id, content.transcription.captions.nativeLanguage.code)}
+            srcLang={content.transcription.captions.nativeLanguage.code}
+            label={content.transcription.captions.nativeLanguage.label}
+            default
+          />
+        )}
+        {id && activeTranslations.map(code => (
+          <track
+            key={code}
+            kind="subtitles"
+            src={getCaptionsUrl(id, code)}
+            srcLang={code}
+            label={content?.transcription?.captions?.availableTranslations.find(o => o.code === code)?.label ?? code}
+          />
+        ))}
+      </video>
+
+      {content?.transcription?.captions && content.transcription.captions.availableTranslations.length > 0 && (
+        <CaptionLanguagePicker
+          options={content.transcription.captions.availableTranslations}
+          active={activeTranslations}
+          onAdd={handleAddCaptionLanguage}
+        />
+      )}
+
+      {showResumePrompt && resumePosition != null && (
+        <div className="resume-prompt">
+          <span>Resume at {formatTimestamp(resumePosition)}?</span>
+          <div className="resume-prompt-actions">
+            <button type="button" className="resume-prompt-btn resume-prompt-btn-primary" onClick={handleResume}>
+              Resume
+            </button>
+            <button type="button" className="resume-prompt-btn" onClick={handleDismissResume}>
+              Start over
+            </button>
+          </div>
+        </div>
+      )}
+
+      {content?.transcription?.chapters != null && content.transcription.chapters.length > 0 && (
+        <ChapterRail chapters={content.transcription.chapters} onSelect={handleChapterClick} />
+      )}
+
+      {analytics && analytics.views > 0 && (
+        <VideoAnalyticsSection analytics={analytics} />
+      )}
 
       <div className="detail-form">
+        <div className="form-field">
+          <div className="detail-summary-header">
+            <label className="form-label">Thumbnail</label>
+            <button
+              type="button"
+              className="detail-generate-btn"
+              onClick={() => void handleRegenerateThumbnail()}
+              disabled={regeneratingThumbnail}
+              title="Regenerate thumbnail — AI picks the best frame"
+            >
+              {regeneratingThumbnail ? <SpinnerIcon /> : <RegenerateIcon />}
+            </button>
+          </div>
+          {content?.hasThumbnail ? (
+            <img
+              src={getThumbnailUrl(content.id, thumbnailVersion || undefined)}
+              alt="Thumbnail"
+              className="detail-thumbnail-preview"
+            />
+          ) : (
+            <div className="detail-thumbnail-placeholder">
+              {regeneratingThumbnail ? 'Generating…' : 'No thumbnail yet'}
+            </div>
+          )}
+        </div>
+
         <div className="form-field">
           <label className="form-label" htmlFor="cd-title">Title</label>
           <input
@@ -225,6 +406,153 @@ export default function ContentDetail() {
       </div>
     </div>
   )
+}
+
+function CaptionLanguagePicker({
+  options,
+  active,
+  onAdd,
+}: {
+  options: LanguageOptionDto[]
+  active: string[]
+  onAdd: (code: string) => void
+}) {
+  return (
+    <div className="caption-picker">
+      <span className="caption-picker-label">Captions:</span>
+      {options.map(option => {
+        const isActive = active.includes(option.code)
+        return (
+          <button
+            key={option.code}
+            type="button"
+            className="caption-picker-btn"
+            onClick={() => onAdd(option.code)}
+            disabled={isActive}
+          >
+            {isActive ? `${option.label} ✓` : option.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function ChapterRail({ chapters, onSelect }: { chapters: ChapterDto[]; onSelect: (startSeconds: number) => void }) {
+  return (
+    <div className="chapter-rail">
+      {chapters.map(chapter => (
+        <button
+          key={`${chapter.startSeconds}-${chapter.title}`}
+          type="button"
+          className="chapter-chip"
+          onClick={() => onSelect(chapter.startSeconds)}
+        >
+          <span className="chapter-chip-time">{formatTimestamp(chapter.startSeconds)}</span>
+          <span className="chapter-chip-title">{chapter.title}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function VideoAnalyticsSection({ analytics }: { analytics: VideoAnalyticsDto }) {
+  return (
+    <div className="detail-analytics">
+      <div className="stat-row">
+        <div className="stat-tile">
+          <p className="stat-tile-label">Views</p>
+          <p className="stat-tile-value">{analytics.views.toLocaleString()}</p>
+        </div>
+        <div className="stat-tile">
+          <p className="stat-tile-label">Completion rate</p>
+          <p className="stat-tile-value">{analytics.completionRate.toFixed(0)}%</p>
+        </div>
+        <div className="stat-tile">
+          <p className="stat-tile-label">Avg. watch time</p>
+          <p className="stat-tile-value">{formatSeconds(analytics.averageWatchTimeSeconds)}</p>
+        </div>
+        <div className="stat-tile">
+          <p className="stat-tile-label">Avg. drop-off point</p>
+          <p className="stat-tile-value">{analytics.averageDropOffSeconds != null ? formatSeconds(analytics.averageDropOffSeconds) : '—'}</p>
+        </div>
+      </div>
+
+      {analytics.retentionCurve.length > 0 && (
+        <div className="chart-card">
+          <h2 className="chart-card-title">Retention curve</h2>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={analytics.retentionCurve} margin={{ top: 4, right: 12, bottom: 4, left: 0 }}>
+              <CartesianGrid vertical={false} stroke="var(--border)" />
+              <XAxis
+                dataKey="percent"
+                type="number"
+                domain={[0, 100]}
+                ticks={[0, 25, 50, 75, 100]}
+                tickFormatter={(v: number) => `${v}%`}
+                tick={{ fill: 'var(--text)', fontSize: 12 }}
+                axisLine={{ stroke: 'var(--border)' }}
+                tickLine={false}
+              />
+              <YAxis
+                domain={[0, 100]}
+                tickFormatter={(v: number) => `${v}%`}
+                tick={{ fill: 'var(--text)', fontSize: 12 }}
+                axisLine={{ stroke: 'var(--border)' }}
+                tickLine={false}
+                width={40}
+              />
+              <Tooltip content={<RetentionTooltip />} cursor={{ stroke: 'var(--border)' }} />
+              <Area
+                type="monotone"
+                dataKey="retentionRate"
+                stroke="var(--chart-accent)"
+                strokeWidth={2}
+                fill="var(--chart-accent)"
+                fillOpacity={0.12}
+                dot={false}
+                activeDot={{ r: 5, stroke: 'var(--bg)', strokeWidth: 2 }}
+                isAnimationActive={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface RetentionTooltipPayloadItem {
+  payload: RetentionPointDto
+}
+
+function RetentionTooltip({ active, payload }: { active?: boolean; payload?: RetentionTooltipPayloadItem[] }) {
+  if (!active || !payload?.length) return null
+  const point = payload[0].payload
+
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-value">{point.retentionRate.toFixed(0)}% still watching</p>
+      <p className="chart-tooltip-label">at {point.percent}% through the video</p>
+    </div>
+  )
+}
+
+function formatTimestamp(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+function formatSeconds(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s`
+  const totalMinutes = Math.round(seconds / 60)
+  if (totalMinutes < 60) return `${totalMinutes}m`
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
 }
 
 function Spinner() {
