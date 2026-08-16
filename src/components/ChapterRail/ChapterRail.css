@@ -1,0 +1,51 @@
+.chapter-rail {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 20px;
+}
+
+.chapter-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  flex-shrink: 0;
+  min-width: 120px;
+  max-width: 180px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--sidebar-bg);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.chapter-chip:hover {
+  background: var(--item-hover);
+  border-color: var(--item-active-text);
+}
+
+.chapter-chip-time {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--item-active-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.chapter-chip-time-end {
+  font-weight: 400;
+  color: var(--text);
+}
+
+.chapter-chip-title {
+  font-size: 13px;
+  color: var(--text-h);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}

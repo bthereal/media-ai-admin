@@ -39,6 +39,9 @@ export default function RootLayout() {
             <NavLink to="/media">Media Library</NavLink>
           </li>
           <li>
+            <NavLink to="/playlists">Playlists</NavLink>
+          </li>
+          <li>
             <NavLink to="/users/create">Create User</NavLink>
           </li>
         </ul>

@@ -91,6 +91,12 @@
   height: 40px;
 }
 
+.media-card-add-to-playlist {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+}
+
 .media-card-delete {
   position: absolute;
   top: 6px;
@@ -189,6 +195,48 @@
 .badge-pending {
   background: var(--item-hover);
   color: var(--text);
+}
+
+.badge-category {
+  background: color-mix(in srgb, var(--item-active-text) 12%, transparent);
+  color: var(--item-active-text);
+}
+
+.media-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Category facets */
+
+.media-facets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.media-facet-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.media-facet-btn:hover {
+  background: var(--item-hover);
+}
+
+.media-facet-btn-active {
+  background: var(--item-active-bg);
+  border-color: var(--item-active-text);
+  color: var(--item-active-text);
 }
 
 /* Pagination */

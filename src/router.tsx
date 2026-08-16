@@ -6,6 +6,8 @@ import CreateUser from './pages/CreateUser'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
 import MediaLibrary from './pages/MediaLibrary'
+import PlaylistDetail from './pages/PlaylistDetail'
+import Playlists from './pages/Playlists'
 import Uploads from './pages/Uploads'
 
 const router = createBrowserRouter([
@@ -24,6 +26,8 @@ const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: 'media', element: <MediaLibrary /> },
       { path: 'media/:id', element: <ContentDetail /> },
+      { path: 'playlists', element: <Playlists /> },
+      { path: 'playlists/:id', element: <PlaylistDetail /> },
       { path: 'uploads', element: <Uploads /> },
       { path: 'users/create', element: <CreateUser /> },
     ],

@@ -1,0 +1,35 @@
+.caption-picker {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.caption-picker-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.caption-picker-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text-h);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.caption-picker-btn:hover:not(:disabled) {
+  background: var(--item-hover);
+}
+
+.caption-picker-btn:disabled {
+  color: var(--item-active-text);
+  border-color: var(--item-active-text);
+  cursor: default;
+}

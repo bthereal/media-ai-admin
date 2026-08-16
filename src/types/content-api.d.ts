@@ -34,6 +34,10 @@ export interface TranscriptionDto {
   chapters: ChapterDto[] | null
   /** Caption/subtitle availability — null until transcription has completed with timed segments */
   captions: CaptionsInfoDto | null
+  /** AI-extracted topic tags — null until the post-transcription tagging step has run, empty if it ran but produced none */
+  tags: string[] | null
+  /** AI-assigned category (e.g. "Product Demo") — null until tagged */
+  category: string | null
 }
 
 /** Full content record returned by GET /api/content/{id} */
@@ -70,6 +74,13 @@ export interface ContentNotFoundResponse {
 
 export type ContentResponse = ContentDto | ContentNotFoundResponse
 
+/** "More like this" response from GET /api/content/{id}/related */
+export interface RelatedVideosDto {
+  ok: true
+  /** Semantically similar videos, nearest first — empty until this video has a completed, embedded transcript */
+  items: ContentDto[]
+}
+
 /** Paginated response from GET /api/content */
 export interface ContentListDto {
   ok: true
@@ -80,4 +91,6 @@ export interface ContentListDto {
   totalPages: number
   hasNext: boolean
   hasPrev: boolean
+  /** Distinct categories present across the whole (unfiltered) library, for building facet filters */
+  availableCategories: string[]
 }

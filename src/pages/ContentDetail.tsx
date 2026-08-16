@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import AddToPlaylistMenu from '../components/AddToPlaylistMenu/AddToPlaylistMenu'
+import CaptionLanguagePicker from '../components/CaptionLanguagePicker/CaptionLanguagePicker'
+import ChapterRail from '../components/ChapterRail/ChapterRail'
+import RelatedVideosRail from '../components/RelatedVideosRail/RelatedVideosRail'
+import { useCaptionTracks } from '../hooks/useCaptionTracks'
 import { usePlaybackTracking } from '../hooks/usePlaybackTracking'
 import { fetchProgress, fetchVideoAnalytics } from '../services/analyticsApi'
-import { deleteContent, fetchContent, generateSummary, getCaptionsUrl, getStreamUrl, getThumbnailUrl, regenerateThumbnail, updateContent } from '../services/contentApi'
+import { deleteContent, fetchContent, fetchRelatedVideos, generateSummary, getCaptionsUrl, getStreamUrl, getThumbnailUrl, regenerateThumbnail, updateContent } from '../services/contentApi'
 import type { RetentionPointDto, VideoAnalyticsDto } from '../types/analytics-api.d.ts'
-import type { ChapterDto, ContentDto, LanguageOptionDto } from '../types/content-api.d.ts'
+import type { ContentDto } from '../types/content-api.d.ts'
 import './ContentDetail.css'
 
 const POLL_INTERVAL_MS = 3000
@@ -32,14 +37,10 @@ export default function ContentDetail() {
   const summaryInitialized = useRef(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [analytics, setAnalytics] = useState<VideoAnalyticsDto | null>(null)
+  const [relatedVideos, setRelatedVideos] = useState<ContentDto[] | null>(null)
   const [resumePosition, setResumePosition] = useState<number | null>(null)
   const [showResumePrompt, setShowResumePrompt] = useState(false)
-  const [activeTranslations, setActiveTranslations] = useState<string[]>([])
-  const [activeTranslationsId, setActiveTranslationsId] = useState(id)
-  if (id !== activeTranslationsId) {
-    setActiveTranslationsId(id)
-    setActiveTranslations([])
-  }
+  const { tracks: captionTracks, activeTranslations, addLanguage: handleAddCaptionLanguage } = useCaptionTracks(id, content?.transcription?.captions)
 
   usePlaybackTracking(id, videoRef)
 
@@ -48,6 +49,15 @@ export default function ContentDetail() {
     let cancelled = false
     fetchVideoAnalytics(id).then(data => {
       if (!cancelled) setAnalytics(data)
+    })
+    return () => { cancelled = true }
+  }, [id])
+
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    fetchRelatedVideos(id).then(data => {
+      if (!cancelled) setRelatedVideos(data)
     })
     return () => { cancelled = true }
   }, [id])
@@ -185,10 +195,6 @@ export default function ContentDetail() {
     setShowResumePrompt(false)
   }
 
-  function handleAddCaptionLanguage(code: string) {
-    setActiveTranslations(prev => (prev.includes(code) ? prev : [...prev, code]))
-  }
-
   async function handleDelete() {
     if (!id) return
     setDeleting(true)
@@ -215,7 +221,14 @@ export default function ContentDetail() {
 
   return (
     <div className="content-detail">
-      <Link to="/media" className="back-link">← Media Library</Link>
+      <div className="detail-top-row">
+        <Link to="/media" className="back-link">← Media Library</Link>
+        {id && (
+          <div className="detail-add-to-playlist">
+            <AddToPlaylistMenu contentId={id} label="Add to playlist" />
+          </div>
+        )}
+      </div>
 
       <video
         key={streamUrl}
@@ -225,23 +238,14 @@ export default function ContentDetail() {
         className="detail-video"
         preload="metadata"
       >
-        {id && content?.transcription?.captions && (
+        {id && captionTracks.map((track, i) => (
           <track
-            key={content.transcription.captions.nativeLanguage.code}
+            key={track.code}
             kind="subtitles"
-            src={getCaptionsUrl(id, content.transcription.captions.nativeLanguage.code)}
-            srcLang={content.transcription.captions.nativeLanguage.code}
-            label={content.transcription.captions.nativeLanguage.label}
-            default
-          />
-        )}
-        {id && activeTranslations.map(code => (
-          <track
-            key={code}
-            kind="subtitles"
-            src={getCaptionsUrl(id, code)}
-            srcLang={code}
-            label={content?.transcription?.captions?.availableTranslations.find(o => o.code === code)?.label ?? code}
+            src={getCaptionsUrl(id, track.code)}
+            srcLang={track.code}
+            label={track.label}
+            default={0 === i}
           />
         ))}
       </video>
@@ -270,6 +274,10 @@ export default function ContentDetail() {
 
       {content?.transcription?.chapters != null && content.transcription.chapters.length > 0 && (
         <ChapterRail chapters={content.transcription.chapters} onSelect={handleChapterClick} />
+      )}
+
+      {relatedVideos && relatedVideos.length > 0 && (
+        <RelatedVideosRail videos={relatedVideos} />
       )}
 
       {analytics && analytics.views > 0 && (
@@ -315,6 +323,26 @@ export default function ContentDetail() {
             onChange={e => setTitleInput(e.target.value)}
           />
         </div>
+
+        {(content?.transcription?.category || (content?.transcription?.tags && content.transcription.tags.length > 0)) && (
+          <div className="form-field">
+            <label className="form-label">Category &amp; tags</label>
+            <div className="detail-tags-row">
+              {content?.transcription?.category && (
+                <Link
+                  to={`/media?category=${encodeURIComponent(content.transcription.category)}`}
+                  className="badge badge-category detail-category-badge detail-category-badge-link"
+                  title={`Browse all "${content.transcription.category}" videos`}
+                >
+                  {content.transcription.category}
+                </Link>
+              )}
+              {content?.transcription?.tags?.map(tag => (
+                <span key={tag} className="detail-tag-chip">{tag}</span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="form-field">
           <div className="detail-summary-header">
@@ -408,53 +436,6 @@ export default function ContentDetail() {
   )
 }
 
-function CaptionLanguagePicker({
-  options,
-  active,
-  onAdd,
-}: {
-  options: LanguageOptionDto[]
-  active: string[]
-  onAdd: (code: string) => void
-}) {
-  return (
-    <div className="caption-picker">
-      <span className="caption-picker-label">Captions:</span>
-      {options.map(option => {
-        const isActive = active.includes(option.code)
-        return (
-          <button
-            key={option.code}
-            type="button"
-            className="caption-picker-btn"
-            onClick={() => onAdd(option.code)}
-            disabled={isActive}
-          >
-            {isActive ? `${option.label} ✓` : option.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-function ChapterRail({ chapters, onSelect }: { chapters: ChapterDto[]; onSelect: (startSeconds: number) => void }) {
-  return (
-    <div className="chapter-rail">
-      {chapters.map(chapter => (
-        <button
-          key={`${chapter.startSeconds}-${chapter.title}`}
-          type="button"
-          className="chapter-chip"
-          onClick={() => onSelect(chapter.startSeconds)}
-        >
-          <span className="chapter-chip-time">{formatTimestamp(chapter.startSeconds)}</span>
-          <span className="chapter-chip-title">{chapter.title}</span>
-        </button>
-      ))}
-    </div>
-  )
-}
 
 function VideoAnalyticsSection({ analytics }: { analytics: VideoAnalyticsDto }) {
   return (
