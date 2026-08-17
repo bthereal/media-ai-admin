@@ -1,0 +1,119 @@
+.add-to-playlist {
+  position: relative;
+  display: inline-block;
+}
+
+.add-to-playlist-trigger {
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-to-playlist-trigger svg {
+  width: 16px;
+  height: 16px;
+}
+
+.add-to-playlist-trigger:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.add-to-playlist-panel {
+  /* top/right are set inline (see AddToPlaylistMenu.tsx) — portaled to document.body
+     and positioned from the trigger's viewport coordinates so it can't be clipped by
+     an ancestor's overflow:hidden (both .media-card and .media-card-thumb use it for
+     rounded corners / thumbnail cropping). */
+  position: fixed;
+  z-index: 1000;
+  min-width: 200px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.add-to-playlist-loading,
+.add-to-playlist-empty {
+  font-size: 13px;
+  color: var(--text);
+  padding: 6px 8px;
+  margin: 0;
+}
+
+.add-to-playlist-option {
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--text-h);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.add-to-playlist-option:hover:not(:disabled) {
+  background: var(--item-hover);
+}
+
+.add-to-playlist-option:disabled {
+  color: var(--color-success);
+  cursor: default;
+}
+
+.add-to-playlist-new-btn {
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--item-active-text);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.add-to-playlist-new-btn:hover {
+  background: var(--item-hover);
+}
+
+.add-to-playlist-new-row {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+}
+
+.add-to-playlist-new-row .form-input {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 13px;
+}
+
+.add-to-playlist-new-row button {
+  background: var(--item-active-text);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 0 10px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.add-to-playlist-new-row button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

@@ -6,6 +6,7 @@ export interface ChunkUploadOptions {
   endpoint: string
   headers?: Record<string, string>
   title?: string
+  captionLanguages?: string[]
   signal: AbortSignal
   onProgress: (bytesUploaded: number, bytesTotal: number) => void
 }
@@ -16,7 +17,7 @@ export interface UploadResult {
 }
 
 export async function uploadInChunks(file: File, options: ChunkUploadOptions): Promise<UploadResult> {
-  const { endpoint, headers = {}, title, signal, onProgress } = options
+  const { endpoint, headers = {}, title, captionLanguages, signal, onProgress } = options
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
   const uploadId = crypto.randomUUID()
   let contentId: string | undefined
@@ -35,6 +36,7 @@ export async function uploadInChunks(file: File, options: ChunkUploadOptions): P
     body.append('mimeType', file.type)
     body.append('chunk', file.slice(start, end))
     if (title) body.append('title', title)
+    if (captionLanguages && captionLanguages.length > 0) body.append('captionLanguages', JSON.stringify(captionLanguages))
 
     const res = await authFetch(endpoint, {
       method: 'POST',

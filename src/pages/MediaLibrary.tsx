@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
+import AddToPlaylistMenu from '../components/AddToPlaylistMenu/AddToPlaylistMenu'
+import { useAuth } from '../contexts/AuthContext'
+import { canDeleteContent } from '../lib/permissions'
 import { deleteContent, fetchContentList, getThumbnailUrl } from '../services/contentApi'
 import type { ContentDto, ContentListDto } from '../types/content-api.d.ts'
 import './MediaLibrary.css'
 
 export default function MediaLibrary() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeCategory = searchParams.get('category')
+  const showMineOnly = searchParams.get('owner') === 'me'
   const [result, setResult] = useState<ContentListDto | null>(null)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -15,7 +21,7 @@ export default function MediaLibrary() {
     let cancelled = false
     setLoading(true)
     setError(false)
-    fetchContentList(page).then(data => {
+    fetchContentList(page, activeCategory, showMineOnly ? 'me' : null).then(data => {
       if (cancelled) return
       if (data) {
         setResult(data)
@@ -25,20 +31,77 @@ export default function MediaLibrary() {
       setLoading(false)
     })
     return () => { cancelled = true }
-  }, [page])
+  }, [page, activeCategory, showMineOnly])
+
+  function handleToggleMine() {
+    setPage(1)
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (showMineOnly) {
+        next.delete('owner')
+      } else {
+        next.set('owner', 'me')
+      }
+      return next
+    })
+  }
 
   function handleDelete(id: string) {
     setResult(prev => prev ? { ...prev, items: prev.items.filter(i => i.id !== id) } : prev)
+  }
+
+  function handleSelectCategory(category: string | null) {
+    setPage(1)
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (category) {
+        next.set('category', category)
+      } else {
+        next.delete('category')
+      }
+      return next
+    })
   }
 
   return (
     <div className="media-library">
       <div className="media-library-header">
         <h1>Media Library</h1>
-        <button type="button" className="btn-upload" onClick={() => void navigate('/uploads')}>
-          Upload
-        </button>
+        <div className="media-library-header-actions">
+          <button
+            type="button"
+            className={`media-facet-btn${showMineOnly ? ' media-facet-btn-active' : ''}`}
+            onClick={handleToggleMine}
+          >
+            My Videos
+          </button>
+          <button type="button" className="btn-upload" onClick={() => void navigate('/uploads')}>
+            Upload
+          </button>
+        </div>
       </div>
+
+      {result && result.availableCategories.length > 0 && (
+        <div className="media-facets">
+          <button
+            type="button"
+            className={`media-facet-btn${activeCategory === null ? ' media-facet-btn-active' : ''}`}
+            onClick={() => handleSelectCategory(null)}
+          >
+            All
+          </button>
+          {result.availableCategories.map(category => (
+            <button
+              key={category}
+              type="button"
+              className={`media-facet-btn${activeCategory === category ? ' media-facet-btn-active' : ''}`}
+              onClick={() => handleSelectCategory(category)}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading && <p className="media-loading">Loading…</p>}
 
@@ -49,7 +112,13 @@ export default function MediaLibrary() {
       {!loading && !error && result && (
         <>
           {result.items.length === 0 ? (
-            <p className="media-empty">No videos uploaded yet.</p>
+            <p className="media-empty">
+              {activeCategory
+                ? `No videos in "${activeCategory}".`
+                : showMineOnly
+                  ? "You haven't uploaded any videos yet."
+                  : 'No videos uploaded yet.'}
+            </p>
           ) : (
             <div className="media-grid">
               {result.items.map(item => (
@@ -86,7 +155,9 @@ export default function MediaLibrary() {
 }
 
 function MediaCard({ item, onDelete }: { item: ContentDto; onDelete: (id: string) => void }) {
+  const { user } = useAuth()
   const [deleting, setDeleting] = useState(false)
+  const canDelete = canDeleteContent(user, item.ownerId)
 
   async function handleDelete(e: React.MouseEvent) {
     e.preventDefault()
@@ -110,6 +181,10 @@ function MediaCard({ item, onDelete }: { item: ContentDto; onDelete: (id: string
             <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9A2.25 2.25 0 0 0 13.5 5.25h-9A2.25 2.25 0 0 0 2.25 7.5v9A2.25 2.25 0 0 0 4.5 18.75Z" />
           </svg>
         )}
+        <div className="media-card-add-to-playlist">
+          <AddToPlaylistMenu contentId={item.id} />
+        </div>
+        {canDelete && (
         <button
           className="media-card-delete"
           onClick={e => void handleDelete(e)}
@@ -127,6 +202,7 @@ function MediaCard({ item, onDelete }: { item: ContentDto; onDelete: (id: string
             </svg>
           )}
         </button>
+        )}
       </div>
       <div className="media-card-body">
         <p className="media-card-name" title={item.title ?? item.filename}>{item.title ?? item.filename}</p>
@@ -134,7 +210,12 @@ function MediaCard({ item, onDelete }: { item: ContentDto; onDelete: (id: string
           {formatBytes(item.fileSize)}
           {item.duration != null && ` · ${formatDuration(item.duration)}`}
         </p>
-        <TranscriptionBadge status={item.transcription?.status ?? null} />
+        <div className="media-card-badges">
+          <TranscriptionBadge status={item.transcription?.status ?? null} />
+          {item.transcription?.category && (
+            <span className="badge badge-category">{item.transcription.category}</span>
+          )}
+        </div>
       </div>
     </Link>
   )

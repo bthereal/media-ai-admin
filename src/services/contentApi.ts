@@ -1,5 +1,5 @@
 import { authFetch, UnauthorizedError } from '../lib/authFetch'
-import type { ContentDto, ContentListDto, ContentResponse } from '../types/content-api.d.ts'
+import type { ContentDto, ContentListDto, ContentResponse, LanguageOptionDto, RelatedVideosDto } from '../types/content-api.d.ts'
 
 const CONTENT_BASE = (import.meta.env.VITE_CONTENT_ENDPOINT as string | undefined) ?? '/api/content'
 
@@ -15,9 +15,16 @@ export async function fetchContent(id: string): Promise<ContentDto | null> {
   }
 }
 
-export async function fetchContentList(page: number = 1): Promise<ContentListDto | null> {
+export async function fetchContentList(
+  page: number = 1,
+  category?: string | null,
+  owner?: string | null,
+): Promise<ContentListDto | null> {
   try {
-    const res = await authFetch(`${CONTENT_BASE}?page=${page}`)
+    const params = new URLSearchParams({ page: String(page) })
+    if (category) params.set('category', category)
+    if (owner) params.set('owner', owner)
+    const res = await authFetch(`${CONTENT_BASE}?${params.toString()}`)
     if (!res.ok) return null
     const data = (await res.json()) as ContentListDto
     return data.ok ? data : null
@@ -80,12 +87,70 @@ export async function deleteContent(id: string): Promise<boolean> {
   }
 }
 
+export async function fetchRelatedVideos(id: string): Promise<ContentDto[] | null> {
+  try {
+    const res = await authFetch(`${CONTENT_BASE}/${id}/related`)
+    if (!res.ok) return null
+    const data = (await res.json()) as RelatedVideosDto
+    return data.ok ? data.items : null
+  } catch (err) {
+    if (err instanceof UnauthorizedError) throw err
+    return null
+  }
+}
+
 export function getStreamUrl(id: string): string {
   return `${CONTENT_BASE}/${id}/stream`
 }
 
-export function getThumbnailUrl(id: string): string {
-  return `${CONTENT_BASE}/${id}/thumbnail`
+export function getThumbnailUrl(id: string, cacheBust?: number): string {
+  const base = `${CONTENT_BASE}/${id}/thumbnail`
+  return cacheBust != null ? `${base}?v=${cacheBust}` : base
+}
+
+export function getCaptionsUrl(id: string, langCode: string): string {
+  return `${CONTENT_BASE}/${id}/captions/${langCode}.vtt`
+}
+
+export async function regenerateThumbnail(id: string): Promise<ContentDto | null> {
+  try {
+    const res = await authFetch(`${CONTENT_BASE}/${id}/thumbnail`, { method: 'POST' })
+    if (!res.ok) return null
+    return (await res.json()) as ContentDto
+  } catch (err) {
+    if (err instanceof UnauthorizedError) throw err
+    return null
+  }
+}
+
+export function getThumbnailCandidateUrl(id: string, index: number): string {
+  return `${CONTENT_BASE}/${id}/thumbnail/candidates/${index}`
+}
+
+export async function selectThumbnail(id: string, index: number): Promise<ContentDto | null> {
+  try {
+    const res = await authFetch(`${CONTENT_BASE}/${id}/thumbnail/select`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ index }),
+    })
+    if (!res.ok) return null
+    return (await res.json()) as ContentDto
+  } catch (err) {
+    if (err instanceof UnauthorizedError) throw err
+    return null
+  }
+}
+
+export async function fetchCaptionLanguages(): Promise<LanguageOptionDto[] | null> {
+  try {
+    const res = await authFetch('/api/caption-languages')
+    if (!res.ok) return null
+    return (await res.json()) as LanguageOptionDto[]
+  } catch (err) {
+    if (err instanceof UnauthorizedError) throw err
+    return null
+  }
 }
 
 export interface SearchVideoResult {

@@ -1,0 +1,14 @@
+.dashboard {
+  max-width: 960px;
+}
+
+.dashboard-loading,
+.dashboard-empty,
+.dashboard-error {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.dashboard-error {
+  color: var(--color-error);
+}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import VideoUploader from '../components/VideoUploader/VideoUploader'
 import { useAuth } from '../contexts/AuthContext'
-import { fetchContent, generateSummary, getStreamUrl, updateContent } from '../services/contentApi'
+import { fetchContent, generateSummary, getStreamUrl, getThumbnailCandidateUrl, selectThumbnail, updateContent } from '../services/contentApi'
 import type { ContentDto } from '../types/content-api.d.ts'
 import './Uploads.css'
 
@@ -42,6 +42,8 @@ function PostUploadView({ contentId, onReset }: { contentId: string; onReset: ()
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [generatingSummary, setGeneratingSummary] = useState(false)
+  const [selectedThumbnailIndex, setSelectedThumbnailIndex] = useState<number | null>(null)
+  const [selectingThumbnail, setSelectingThumbnail] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const titleInitialized = useRef(false)
   const summaryInitialized = useRef(false)
@@ -97,6 +99,16 @@ function PostUploadView({ contentId, onReset }: { contentId: string; onReset: ()
     }
   }
 
+  async function handleSelectThumbnail(index: number) {
+    setSelectingThumbnail(true)
+    const updated = await selectThumbnail(contentId, index)
+    setSelectingThumbnail(false)
+    if (updated) {
+      setContent(updated)
+      setSelectedThumbnailIndex(index)
+    }
+  }
+
   async function handleGenerateSummary() {
     setGeneratingSummary(true)
     const updated = await generateSummary(contentId)
@@ -118,6 +130,26 @@ function PostUploadView({ contentId, onReset }: { contentId: string; onReset: ()
         className="post-upload-video"
         preload="metadata"
       />
+
+      {content && content.thumbnailCandidateCount > 0 && (
+        <div className="thumbnail-picker">
+          <span className="form-label">Choose a thumbnail</span>
+          <div className="thumbnail-picker-grid">
+            {Array.from({ length: content.thumbnailCandidateCount }, (_, index) => (
+              <button
+                key={index}
+                type="button"
+                className={`thumbnail-picker-item${selectedThumbnailIndex === index ? ' thumbnail-picker-item-active' : ''}`}
+                onClick={() => void handleSelectThumbnail(index)}
+                disabled={selectingThumbnail}
+                aria-label={`Use thumbnail option ${index + 1}`}
+              >
+                <img src={getThumbnailCandidateUrl(contentId, index)} alt="" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="post-upload-form">
         <div className="form-field">

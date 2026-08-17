@@ -1,0 +1,129 @@
+.playlist-detail {
+  max-width: 720px;
+}
+
+.playlist-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.playlist-title-input {
+  flex: 1;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-h);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-family: inherit;
+}
+
+.playlist-title-input:hover,
+.playlist-title-input:focus {
+  border-color: var(--border);
+  outline: none;
+}
+
+.playlist-title-saving {
+  font-size: 12px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.playlist-empty-player {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 240px;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  color: var(--text);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.playlist-item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.playlist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  background: var(--sidebar-bg);
+}
+
+.playlist-item-active {
+  border-color: var(--item-active-text);
+}
+
+.playlist-item-play {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  min-width: 0;
+}
+
+.playlist-item-thumb {
+  width: 72px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #000;
+}
+
+.playlist-item-thumb-empty {
+  background: var(--item-hover);
+}
+
+.playlist-item-title {
+  font-size: 13px;
+  color: var(--text-h);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playlist-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.playlist-item-actions button {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.playlist-item-actions button:hover:not(:disabled) {
+  background: var(--item-hover);
+}
+
+.playlist-item-actions button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
