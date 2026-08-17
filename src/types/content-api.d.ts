@@ -47,6 +47,8 @@ export interface ContentDto {
   id: string
   /** User-defined title; null until set */
   title: string | null
+  /** Identifier (email) of the uploader; null for content uploaded before ownership tracking existed */
+  ownerId: string | null
   /** Stored filename (e.g. "video.mp4") */
   filename: string
   /** UUID prefix used to locate the file in storage */
@@ -59,6 +61,8 @@ export interface ContentDto {
   duration: number | null
   /** Whether a JPEG thumbnail has been generated for this video */
   hasThumbnail: boolean
+  /** Number of candidate thumbnail frames available via /thumbnail/candidates/{index} */
+  thumbnailCandidateCount: number
   /** ISO 8601 creation timestamp */
   createdAt: string
   /** ISO 8601 timestamp when archived; null if active */

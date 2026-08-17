@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import AddToPlaylistMenu from '../components/AddToPlaylistMenu/AddToPlaylistMenu'
+import { useAuth } from '../contexts/AuthContext'
+import { canDeleteContent } from '../lib/permissions'
 import { deleteContent, fetchContentList, getThumbnailUrl } from '../services/contentApi'
 import type { ContentDto, ContentListDto } from '../types/content-api.d.ts'
 import './MediaLibrary.css'
@@ -9,6 +11,7 @@ export default function MediaLibrary() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const activeCategory = searchParams.get('category')
+  const showMineOnly = searchParams.get('owner') === 'me'
   const [result, setResult] = useState<ContentListDto | null>(null)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -18,7 +21,7 @@ export default function MediaLibrary() {
     let cancelled = false
     setLoading(true)
     setError(false)
-    fetchContentList(page, activeCategory).then(data => {
+    fetchContentList(page, activeCategory, showMineOnly ? 'me' : null).then(data => {
       if (cancelled) return
       if (data) {
         setResult(data)
@@ -28,7 +31,20 @@ export default function MediaLibrary() {
       setLoading(false)
     })
     return () => { cancelled = true }
-  }, [page, activeCategory])
+  }, [page, activeCategory, showMineOnly])
+
+  function handleToggleMine() {
+    setPage(1)
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (showMineOnly) {
+        next.delete('owner')
+      } else {
+        next.set('owner', 'me')
+      }
+      return next
+    })
+  }
 
   function handleDelete(id: string) {
     setResult(prev => prev ? { ...prev, items: prev.items.filter(i => i.id !== id) } : prev)
@@ -51,9 +67,18 @@ export default function MediaLibrary() {
     <div className="media-library">
       <div className="media-library-header">
         <h1>Media Library</h1>
-        <button type="button" className="btn-upload" onClick={() => void navigate('/uploads')}>
-          Upload
-        </button>
+        <div className="media-library-header-actions">
+          <button
+            type="button"
+            className={`media-facet-btn${showMineOnly ? ' media-facet-btn-active' : ''}`}
+            onClick={handleToggleMine}
+          >
+            My Videos
+          </button>
+          <button type="button" className="btn-upload" onClick={() => void navigate('/uploads')}>
+            Upload
+          </button>
+        </div>
       </div>
 
       {result && result.availableCategories.length > 0 && (
@@ -88,7 +113,11 @@ export default function MediaLibrary() {
         <>
           {result.items.length === 0 ? (
             <p className="media-empty">
-              {activeCategory ? `No videos in "${activeCategory}".` : 'No videos uploaded yet.'}
+              {activeCategory
+                ? `No videos in "${activeCategory}".`
+                : showMineOnly
+                  ? "You haven't uploaded any videos yet."
+                  : 'No videos uploaded yet.'}
             </p>
           ) : (
             <div className="media-grid">
@@ -126,7 +155,9 @@ export default function MediaLibrary() {
 }
 
 function MediaCard({ item, onDelete }: { item: ContentDto; onDelete: (id: string) => void }) {
+  const { user } = useAuth()
   const [deleting, setDeleting] = useState(false)
+  const canDelete = canDeleteContent(user, item.ownerId)
 
   async function handleDelete(e: React.MouseEvent) {
     e.preventDefault()
@@ -153,6 +184,7 @@ function MediaCard({ item, onDelete }: { item: ContentDto; onDelete: (id: string
         <div className="media-card-add-to-playlist">
           <AddToPlaylistMenu contentId={item.id} />
         </div>
+        {canDelete && (
         <button
           className="media-card-delete"
           onClick={e => void handleDelete(e)}
@@ -170,6 +202,7 @@ function MediaCard({ item, onDelete }: { item: ContentDto; onDelete: (id: string
             </svg>
           )}
         </button>
+        )}
       </div>
       <div className="media-card-body">
         <p className="media-card-name" title={item.title ?? item.filename}>{item.title ?? item.filename}</p>

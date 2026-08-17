@@ -8,6 +8,7 @@ export default function RootLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
+  const isAdmin = user?.roles.includes('ROLE_GROUP_ADMIN') ?? false
 
   function handleLogout() {
     logout()
@@ -41,9 +42,11 @@ export default function RootLayout() {
           <li>
             <NavLink to="/playlists">Playlists</NavLink>
           </li>
-          <li>
-            <NavLink to="/users/create">Create User</NavLink>
-          </li>
+          {isAdmin && (
+            <li>
+              <NavLink to="/users">Users</NavLink>
+            </li>
+          )}
         </ul>
         <div className="sidebar-footer">
           {user && (

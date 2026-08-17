@@ -22,6 +22,52 @@
   display: block;
 }
 
+/* Thumbnail candidate picker */
+
+.thumbnail-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.thumbnail-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.thumbnail-picker-item {
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: none;
+  line-height: 0;
+  transition: border-color 0.15s;
+}
+
+.thumbnail-picker-item:hover:not(:disabled) {
+  border-color: var(--item-active-text);
+}
+
+.thumbnail-picker-item:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.thumbnail-picker-item img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+}
+
+.thumbnail-picker-item-active {
+  border-color: var(--item-active-text);
+  box-shadow: 0 0 0 1px var(--item-active-text);
+}
+
 /* Form fields */
 
 .post-upload-summary-header {

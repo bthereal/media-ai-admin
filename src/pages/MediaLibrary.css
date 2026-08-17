@@ -13,6 +13,12 @@
   margin: 0;
 }
 
+.media-library-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .btn-upload {
   background: #16a34a;
   color: #fff;

@@ -5,8 +5,10 @@ import AddToPlaylistMenu from '../components/AddToPlaylistMenu/AddToPlaylistMenu
 import CaptionLanguagePicker from '../components/CaptionLanguagePicker/CaptionLanguagePicker'
 import ChapterRail from '../components/ChapterRail/ChapterRail'
 import RelatedVideosRail from '../components/RelatedVideosRail/RelatedVideosRail'
+import { useAuth } from '../contexts/AuthContext'
 import { useCaptionTracks } from '../hooks/useCaptionTracks'
 import { usePlaybackTracking } from '../hooks/usePlaybackTracking'
+import { canDeleteContent } from '../lib/permissions'
 import { fetchProgress, fetchVideoAnalytics } from '../services/analyticsApi'
 import { deleteContent, fetchContent, fetchRelatedVideos, generateSummary, getCaptionsUrl, getStreamUrl, getThumbnailUrl, regenerateThumbnail, updateContent } from '../services/contentApi'
 import type { RetentionPointDto, VideoAnalyticsDto } from '../types/analytics-api.d.ts'
@@ -21,6 +23,7 @@ const MAX_CHAPTER_WAIT_POLLS = 20
 export default function ContentDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [content, setContent] = useState<ContentDto | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [titleInput, setTitleInput] = useState('')
@@ -411,14 +414,16 @@ export default function ContentDetail() {
         )}
 
         <div className="detail-actions">
-          <button
-            type="button"
-            className="btn-delete"
-            onClick={() => void handleDelete()}
-            disabled={deleting}
-          >
-            {deleting ? 'Deleting…' : 'Delete'}
-          </button>
+          {canDeleteContent(user, content?.ownerId ?? null) && (
+            <button
+              type="button"
+              className="btn-delete"
+              onClick={() => void handleDelete()}
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          )}
           <div className="detail-actions-right">
             {saveSuccess && <span className="detail-saved">Saved</span>}
             <button

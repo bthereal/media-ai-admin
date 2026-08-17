@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { ROLE_CATALOG } from '../lib/roleCatalog'
 import { createUser } from '../services/userApi'
 import './CreateUser.css'
 
@@ -8,9 +9,10 @@ interface FormState {
   password: string
   firstName: string
   lastName: string
+  role: string
 }
 
-const EMPTY: FormState = { email: '', password: '', firstName: '', lastName: '' }
+const EMPTY: FormState = { email: '', password: '', firstName: '', lastName: '', role: 'editor' }
 
 export default function CreateUser() {
   const { token } = useAuth()
@@ -21,7 +23,7 @@ export default function CreateUser() {
   const [loading, setLoading] = useState(false)
 
   function set(field: keyof FormState) {
-    return (e: React.ChangeEvent<HTMLInputElement>) => {
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       setForm(f => ({ ...f, [field]: e.target.value }))
       setFieldErrors(fe => ({ ...fe, [field]: '' }))
     }
@@ -50,9 +52,6 @@ export default function CreateUser() {
   return (
     <div className="create-user-page">
       <h1>Create User</h1>
-      <p className="create-user-subtitle">
-        New users are created with the <strong>CONTENT_ADMIN</strong> role and full content permissions.
-      </p>
 
       <form className="create-user-form" onSubmit={handleSubmit} noValidate>
         <div className="form-row">
@@ -94,6 +93,19 @@ export default function CreateUser() {
           hint="Minimum 8 characters"
           autoComplete="new-password"
         />
+
+        <div className="form-field">
+          <label htmlFor="role" className="form-label">Role</label>
+          <select id="role" className="form-input" value={form.role} onChange={set('role')}>
+            {ROLE_CATALOG.map(role => (
+              <option key={role.key} value={role.key}>{role.label}</option>
+            ))}
+          </select>
+          <p className="form-hint">
+            {ROLE_CATALOG.find(role => role.key === form.role)?.description}
+          </p>
+          {fieldErrors.role && <p className="form-error" role="alert">{fieldErrors.role}</p>}
+        </div>
 
         {error && <p className="form-error" role="alert">{error}</p>}
         {success && <p className="form-success" role="status">{success}</p>}
