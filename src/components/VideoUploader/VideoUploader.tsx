@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { fetchCaptionLanguages } from '../../services/contentApi'
-import type { LanguageOptionDto } from '../../types/content-api.d.ts'
 import { useChunkedUpload } from './useChunkedUpload'
 import './VideoUploader.css'
-import '../CaptionLanguagePicker/CaptionLanguagePicker.css'
 
 interface VideoUploaderProps {
   endpoint: string
@@ -15,8 +12,6 @@ interface VideoUploaderProps {
 export default function VideoUploader({ endpoint, headers, onUploadComplete, onFileSelected }: VideoUploaderProps) {
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
-  const [captionLanguages, setCaptionLanguages] = useState<LanguageOptionDto[]>([])
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
@@ -29,16 +24,6 @@ export default function VideoUploader({ endpoint, headers, onUploadComplete, onF
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
     }
   }, [])
-
-  useEffect(() => {
-    fetchCaptionLanguages().then(languages => {
-      if (languages) setCaptionLanguages(languages)
-    })
-  }, [])
-
-  function toggleLanguage(code: string) {
-    setSelectedLanguages(prev => prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code])
-  }
 
   useEffect(() => {
     if (status === 'complete' && contentId != null) {
@@ -79,7 +64,6 @@ export default function VideoUploader({ endpoint, headers, onUploadComplete, onF
     previewUrlRef.current = null
     setFile(null)
     setTitle('')
-    setSelectedLanguages([])
     setPreviewUrl(null)
     setFileError(null)
     reset()
@@ -135,23 +119,6 @@ export default function VideoUploader({ endpoint, headers, onUploadComplete, onF
               </div>
             )}
 
-            {status === 'idle' && captionLanguages.length > 0 && (
-              <div className="caption-picker">
-                <span className="caption-picker-label">Generate captions for:</span>
-                {captionLanguages.map(language => (
-                  <button
-                    key={language.code}
-                    type="button"
-                    className="caption-picker-btn"
-                    onClick={() => toggleLanguage(language.code)}
-                    aria-pressed={selectedLanguages.includes(language.code)}
-                  >
-                    {selectedLanguages.includes(language.code) ? `${language.label} ✓` : language.label}
-                  </button>
-                ))}
-              </div>
-            )}
-
             {isUploading && (
               <div className="progress-track" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
                 <div className="progress-bar" style={{ width: `${progress}%` }} />
@@ -162,7 +129,7 @@ export default function VideoUploader({ endpoint, headers, onUploadComplete, onF
 
             <div className="upload-actions">
               {status === 'idle' && (
-                <button type="button" className="btn-primary" onClick={() => upload(file, endpoint, headers, title.trim() || undefined, selectedLanguages)}>
+                <button type="button" className="btn-primary" onClick={() => upload(file, endpoint, headers, title.trim() || undefined)}>
                   Upload
                 </button>
               )}

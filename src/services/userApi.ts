@@ -56,6 +56,45 @@ export async function reactivateUser(id: string): Promise<UserListItem | null> {
   }
 }
 
+export interface UpdateUserPayload {
+  email: string
+  firstName: string
+  lastName: string
+  password?: string
+  role?: string
+}
+
+export interface UpdateUserError {
+  ok: false
+  error: string
+  errors?: Record<string, string>
+}
+
+export async function updateUser(id: string, payload: UpdateUserPayload): Promise<UserListItem | UpdateUserError> {
+  try {
+    const res = await authFetch(`/api/auth/users/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await res.json() as Record<string, unknown>
+
+    if (res.ok) {
+      return data as unknown as UserListItem
+    }
+
+    if (res.status === 422 && data.errors) {
+      return { ok: false, error: 'Validation failed.', errors: data.errors as Record<string, string> }
+    }
+
+    return { ok: false, error: (data.message as string | undefined) ?? 'Failed to update user.' }
+  } catch (err) {
+    if (err instanceof UnauthorizedError) throw err
+    return { ok: false, error: 'Unable to connect to the API.' }
+  }
+}
+
 export interface CreateUserPayload {
   email: string
   password: string

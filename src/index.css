@@ -1,16 +1,17 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
+  --text: #57534e;
+  --text-h: #0c0a09;
   --bg: #ffffff;
-  --sidebar-bg: #f9f9fb;
-  --border: #e5e4e7;
-  --item-hover: rgba(0, 0, 0, 0.05);
-  --item-active-bg: rgba(170, 59, 255, 0.1);
-  --item-active-text: #7c3aed;
+  --sidebar-bg: #fafaf9;
+  --border: #e7e5e4;
+  --item-hover: rgba(0, 0, 0, 0.045);
+  --item-active-bg: rgba(229, 9, 20, 0.08);
+  --item-active-text: #e50914;
   --color-success: #16a34a;
   --color-error: #dc2626;
-  --chart-accent: #7c3aed;
-  --chart-accent-wash: rgba(124, 58, 237, 0.1);
+  --chart-accent: #e50914;
+  --chart-accent-wash: rgba(229, 9, 20, 0.1);
+  --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.08);
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
@@ -26,20 +27,37 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --sidebar-bg: #111218;
-    --border: #2e303a;
-    --item-hover: rgba(255, 255, 255, 0.06);
-    --item-active-bg: rgba(192, 132, 252, 0.15);
-    --item-active-text: #c084fc;
+  :root:not([data-theme='light']) {
+    --text: #a1a1aa;
+    --text-h: #fafafa;
+    --bg: #0a0a0b;
+    --sidebar-bg: #000000;
+    --border: #26262a;
+    --item-hover: rgba(255, 255, 255, 0.07);
+    --item-active-bg: rgba(246, 18, 29, 0.16);
+    --item-active-text: #f6121d;
     --color-success: #4ade80;
-    --color-error: #f87171;
-    --chart-accent: #a970f0;
-    --chart-accent-wash: rgba(169, 112, 240, 0.15);
+    --color-error: #ff5449;
+    --chart-accent: #f6121d;
+    --chart-accent-wash: rgba(246, 18, 29, 0.15);
+    --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.5);
   }
+}
+
+:root[data-theme='dark'] {
+  --text: #a1a1aa;
+  --text-h: #fafafa;
+  --bg: #0a0a0b;
+  --sidebar-bg: #000000;
+  --border: #26262a;
+  --item-hover: rgba(255, 255, 255, 0.07);
+  --item-active-bg: rgba(246, 18, 29, 0.16);
+  --item-active-text: #f6121d;
+  --color-success: #4ade80;
+  --color-error: #ff5449;
+  --chart-accent: #f6121d;
+  --chart-accent-wash: rgba(246, 18, 29, 0.15);
+  --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 *,
@@ -56,6 +74,11 @@ body,
 
 html {
   height: 100%;
+}
+
+body {
+  background: var(--bg);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 h1 {
@@ -81,15 +104,19 @@ h1 {
 }
 
 .form-input {
-  padding: 8px 12px;
+  padding: 9px 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--bg);
   color: var(--text-h);
   font-size: 14px;
   font-family: inherit;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
   outline: none;
+}
+
+.form-input:focus {
+  box-shadow: 0 0 0 3px var(--item-active-bg);
 }
 
 .form-input:focus {
@@ -113,17 +140,22 @@ h1 {
   background: var(--item-active-text);
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 9px 18px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: opacity 0.15s;
+  letter-spacing: 0.1px;
+  transition: opacity 0.15s, transform 0.15s;
 }
 
 .btn-primary:hover:not(:disabled) {
   opacity: 0.88;
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .btn-primary:disabled {
@@ -146,9 +178,14 @@ h1 {
 
 .stat-tile {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 16px 18px;
   background: var(--sidebar-bg);
+  transition: border-color 0.15s;
+}
+
+.stat-tile:hover {
+  border-color: var(--item-active-text);
 }
 
 .stat-tile-label {
@@ -168,7 +205,7 @@ h1 {
 
 .chart-card {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 20px;
 }
 
@@ -180,11 +217,11 @@ h1 {
 }
 
 .chart-tooltip {
-  background: var(--bg);
+  background: var(--sidebar-bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 8px 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-elevated);
 }
 
 .chart-tooltip-value {

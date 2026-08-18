@@ -11,24 +11,22 @@
 
 .related-videos-rail {
   display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .related-video-card {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex-shrink: 0;
-  width: 160px;
   text-decoration: none;
   color: inherit;
 }
 
 .related-video-thumb {
-  width: 160px;
-  height: 90px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
   border-radius: 6px;
   object-fit: cover;
   background: #000;

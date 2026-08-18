@@ -20,13 +20,13 @@
 }
 
 .btn-upload {
-  background: #16a34a;
+  background: var(--item-active-text);
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 8px 18px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   transition: opacity 0.15s;
@@ -74,12 +74,13 @@
   overflow: hidden;
   text-decoration: none;
   color: inherit;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.2s, transform 0.2s;
 }
 
 .media-card:hover {
   border-color: var(--item-active-text);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-elevated);
+  transform: translateY(-2px);
 }
 
 .media-card-thumb {
@@ -90,6 +91,7 @@
   align-items: center;
   justify-content: center;
   color: var(--border);
+  overflow: hidden;
 }
 
 .media-card-thumb svg {
@@ -148,6 +150,11 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.35s ease;
+}
+
+.media-card:hover .media-card-thumb-img {
+  transform: scale(1.05);
 }
 
 .media-card-body {

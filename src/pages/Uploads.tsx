@@ -24,17 +24,13 @@ export default function Uploads() {
           onUploadComplete={setContentId}
         />
       ) : (
-        <PostUploadView
-          key={contentId}
-          contentId={contentId}
-          onReset={() => setContentId(null)}
-        />
+        <PostUploadView key={contentId} contentId={contentId} />
       )}
     </div>
   )
 }
 
-function PostUploadView({ contentId, onReset }: { contentId: string; onReset: () => void }) {
+function PostUploadView({ contentId }: { contentId: string }) {
   const [content, setContent] = useState<ContentDto | null>(null)
   const [titleInput, setTitleInput] = useState('')
   const [summaryInput, setSummaryInput] = useState('')
@@ -121,6 +117,17 @@ function PostUploadView({ contentId, onReset }: { contentId: string; onReset: ()
 
   const transcription = content?.transcription ?? null
   const transcriptReady = transcription?.status === 'completed'
+
+  const hasThumbnail = content?.hasThumbnail ?? false
+  const hasSummary = summaryInput.trim().length > 0
+  const canSave = hasThumbnail && hasSummary
+  const validationMessage = hasThumbnail && hasSummary
+    ? null
+    : !hasThumbnail && !hasSummary
+      ? 'Select a thumbnail and enter a summary before saving'
+      : !hasThumbnail
+        ? 'Select a thumbnail before saving'
+        : 'Enter a summary before saving'
 
   return (
     <div className="post-upload">
@@ -233,16 +240,16 @@ function PostUploadView({ contentId, onReset }: { contentId: string; onReset: ()
           </div>
         )}
 
+        {validationMessage && <p className="form-hint post-upload-validation">{validationMessage}</p>}
+
         <div className="post-upload-actions">
-          <button type="button" className="btn-ghost" onClick={onReset}>
-            Upload another
-          </button>
           {saveSuccess && <span className="post-upload-saved">Saved</span>}
           <button
             type="button"
             className="btn-primary"
             onClick={() => void handleSave()}
-            disabled={saving}
+            disabled={saving || !canSave}
+            title={validationMessage ?? undefined}
           >
             {saving ? 'Saving…' : 'Save'}
           </button>

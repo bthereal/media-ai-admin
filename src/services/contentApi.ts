@@ -1,5 +1,5 @@
 import { authFetch, UnauthorizedError } from '../lib/authFetch'
-import type { ContentDto, ContentListDto, ContentResponse, LanguageOptionDto, RelatedVideosDto } from '../types/content-api.d.ts'
+import type { ContentDto, ContentListDto, ContentResponse, RelatedVideosDto } from '../types/content-api.d.ts'
 
 const CONTENT_BASE = (import.meta.env.VITE_CONTENT_ENDPOINT as string | undefined) ?? '/api/content'
 
@@ -136,17 +136,6 @@ export async function selectThumbnail(id: string, index: number): Promise<Conten
     })
     if (!res.ok) return null
     return (await res.json()) as ContentDto
-  } catch (err) {
-    if (err instanceof UnauthorizedError) throw err
-    return null
-  }
-}
-
-export async function fetchCaptionLanguages(): Promise<LanguageOptionDto[] | null> {
-  try {
-    const res = await authFetch('/api/caption-languages')
-    if (!res.ok) return null
-    return (await res.json()) as LanguageOptionDto[]
   } catch (err) {
     if (err instanceof UnauthorizedError) throw err
     return null

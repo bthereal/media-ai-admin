@@ -42,6 +42,8 @@ export interface VideoAnalyticsSummaryDto {
   completionRate: number
   /** Sum of estimated watch time across all viewers, in seconds */
   watchTimeSeconds: number
+  /** AI-assigned category (e.g. "Product Demo") — null until tagged */
+  category: string | null
 }
 
 /** The current viewer's playback progress, returned by GET /api/content/{id}/progress */

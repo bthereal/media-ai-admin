@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
+import BrandLogo from '../components/BrandLogo'
 import { useAuth } from '../contexts/AuthContext'
 import './Login.css'
 
@@ -27,7 +28,10 @@ export default function Login() {
   return (
     <div className="login-shell">
       <div className="login-card">
-        <h1 className="login-title">Content Admin</h1>
+        <div className="login-brand">
+          <BrandLogo size={34} />
+          <h1 className="login-title">YouFlix</h1>
+        </div>
         <p className="login-subtitle">Sign in to your account</p>
 
         <form className="login-form" onSubmit={handleSubmit} noValidate>

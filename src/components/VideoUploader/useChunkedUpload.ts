@@ -16,7 +16,6 @@ export interface UseChunkedUploadReturn extends UploadState {
     endpoint: string,
     headers?: Record<string, string>,
     title?: string,
-    captionLanguages?: string[],
   ) => Promise<void>
   cancel: () => void
   reset: () => void
@@ -31,7 +30,6 @@ export function useChunkedUpload(): UseChunkedUploadReturn {
     endpoint: string,
     headers?: Record<string, string>,
     title?: string,
-    captionLanguages?: string[],
   ) => {
     abortRef.current?.abort()
     const controller = new AbortController()
@@ -44,7 +42,6 @@ export function useChunkedUpload(): UseChunkedUploadReturn {
         endpoint,
         headers,
         title,
-        captionLanguages,
         signal: controller.signal,
         onProgress: (uploaded, total) => {
           setState(prev => ({ ...prev, progress: Math.round((uploaded / total) * 100) }))

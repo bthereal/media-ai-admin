@@ -66,7 +66,7 @@ export default function MediaLibrary() {
   return (
     <div className="media-library">
       <div className="media-library-header">
-        <h1>Media Library</h1>
+        <h1>Home</h1>
         <div className="media-library-header-actions">
           <button
             type="button"
