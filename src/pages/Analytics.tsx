@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router'
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { fetchAnalyticsOverview } from '../services/analyticsApi'
 import type { AnalyticsOverviewDto, VideoAnalyticsSummaryDto } from '../types/analytics-api.d.ts'
-import './Dashboard.css'
+import './Analytics.css'
 
 const TOP_VIDEOS_LIMIT = 8
 
-export default function Dashboard() {
+export default function Analytics() {
   const navigate = useNavigate()
   const [overview, setOverview] = useState<AnalyticsOverviewDto | null>(null)
   const [loading, setLoading] = useState(true)
@@ -31,7 +31,7 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
-      <h1>Dashboard</h1>
+      <h1>Analytics</h1>
 
       {loading && <p className="dashboard-loading">Loading…</p>}
 
@@ -49,6 +49,14 @@ export default function Dashboard() {
               <StatTile label="Total views" value={overview.totalViews.toLocaleString()} />
               <StatTile label="Total watch time" value={formatWatchTime(overview.totalWatchTimeSeconds)} />
               <StatTile label="Avg. completion rate" value={`${overview.averageCompletionRate.toFixed(0)}%`} />
+            </div>
+
+            <div className="chart-card">
+              <h2 className="chart-card-title">Videos by category</h2>
+              <CategoryChart
+                videos={overview.videos}
+                onSelect={category => void navigate(`/media?category=${encodeURIComponent(category)}`)}
+              />
             </div>
 
             {overview.totalViews === 0 ? (
@@ -104,6 +112,69 @@ function TopVideosChart({ videos, onSelect }: { videos: VideoAnalyticsSummaryDto
         </Bar>
       </BarChart>
     </ResponsiveContainer>
+  )
+}
+
+const UNCATEGORIZED = 'Uncategorized'
+
+interface CategoryCount {
+  category: string
+  count: number
+}
+
+function CategoryChart({ videos, onSelect }: { videos: VideoAnalyticsSummaryDto[]; onSelect: (category: string) => void }) {
+  const counts = new Map<string, number>()
+  for (const v of videos) {
+    const key = v.category ?? UNCATEGORIZED
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  const data: CategoryCount[] = Array.from(counts, ([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count)
+  const chartHeight = Math.max(120, data.length * 44)
+
+  return (
+    <ResponsiveContainer width="100%" height={chartHeight}>
+      <BarChart data={data} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 4 }} barCategoryGap="28%">
+        <CartesianGrid horizontal={false} stroke="var(--border)" />
+        <XAxis type="number" allowDecimals={false} tick={{ fill: 'var(--text)', fontSize: 12 }} axisLine={{ stroke: 'var(--border)' }} tickLine={false} />
+        <YAxis
+          type="category"
+          dataKey="category"
+          width={160}
+          tick={{ fill: 'var(--text-h)', fontSize: 12 }}
+          axisLine={{ stroke: 'var(--border)' }}
+          tickLine={false}
+          tickFormatter={(name: string) => (name.length > 22 ? `${name.slice(0, 21)}…` : name)}
+        />
+        <Tooltip content={<CategoryTooltip />} cursor={{ fill: 'var(--item-hover)' }} />
+        <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={24}>
+          {data.map(row => (
+            <Cell
+              key={row.category}
+              fill="var(--chart-accent)"
+              cursor={row.category === UNCATEGORIZED ? 'default' : 'pointer'}
+              onClick={() => row.category !== UNCATEGORIZED && onSelect(row.category)}
+            />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
+interface CategoryTooltipPayloadItem {
+  payload: CategoryCount
+}
+
+function CategoryTooltip({ active, payload }: { active?: boolean; payload?: CategoryTooltipPayloadItem[] }) {
+  if (!active || !payload?.length) return null
+  const item = payload[0].payload
+
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-value">{item.count.toLocaleString()} video{item.count === 1 ? '' : 's'}</p>
+      <p className="chart-tooltip-label">{item.category}</p>
+    </div>
   )
 }
 

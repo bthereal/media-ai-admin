@@ -27,10 +27,10 @@ export default defineConfig([
     },
   },
   {
-    // useAuth() is intentionally colocated with AuthProvider/AuthContext in the
+    // useAuth()/useTheme() are intentionally colocated with their providers in the
     // same file — a standard React pattern; only affects Fast Refresh smoothness
     // in dev, not correctness or production behavior.
-    files: ['src/contexts/AuthContext.tsx'],
+    files: ['src/contexts/AuthContext.tsx', 'src/contexts/ThemeContext.tsx'],
     rules: {
       'react-refresh/only-export-components': 'off',
     },

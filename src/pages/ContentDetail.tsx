@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import AddToPlaylistMenu from '../components/AddToPlaylistMenu/AddToPlaylistMenu'
-import CaptionLanguagePicker from '../components/CaptionLanguagePicker/CaptionLanguagePicker'
 import ChapterRail from '../components/ChapterRail/ChapterRail'
 import RelatedVideosRail from '../components/RelatedVideosRail/RelatedVideosRail'
 import { useAuth } from '../contexts/AuthContext'
-import { useCaptionTracks } from '../hooks/useCaptionTracks'
 import { usePlaybackTracking } from '../hooks/usePlaybackTracking'
-import { canDeleteContent } from '../lib/permissions'
+import { getCaptionTracks } from '../lib/captionTracks'
+import { canDeleteContent, canEditContent } from '../lib/permissions'
 import { fetchProgress, fetchVideoAnalytics } from '../services/analyticsApi'
 import { deleteContent, fetchContent, fetchRelatedVideos, generateSummary, getCaptionsUrl, getStreamUrl, getThumbnailUrl, regenerateThumbnail, updateContent } from '../services/contentApi'
 import type { RetentionPointDto, VideoAnalyticsDto } from '../types/analytics-api.d.ts'
@@ -43,7 +42,7 @@ export default function ContentDetail() {
   const [relatedVideos, setRelatedVideos] = useState<ContentDto[] | null>(null)
   const [resumePosition, setResumePosition] = useState<number | null>(null)
   const [showResumePrompt, setShowResumePrompt] = useState(false)
-  const { tracks: captionTracks, activeTranslations, addLanguage: handleAddCaptionLanguage } = useCaptionTracks(id, content?.transcription?.captions)
+  const captionTracks = getCaptionTracks(content?.transcription?.captions)
 
   usePlaybackTracking(id, videoRef)
 
@@ -212,7 +211,7 @@ export default function ContentDetail() {
   if (notFound) {
     return (
       <div className="content-detail">
-        <Link to="/media" className="back-link">← Media Library</Link>
+        <Link to="/media" className="back-link">← Home</Link>
         <p className="detail-not-found">Video not found.</p>
       </div>
     )
@@ -221,11 +220,12 @@ export default function ContentDetail() {
   const transcription = content?.transcription ?? null
   const transcriptReady = transcription?.status === 'completed'
   const streamUrl = id ? getStreamUrl(id) : ''
+  const canEdit = canEditContent(user, content?.ownerId ?? null)
 
   return (
     <div className="content-detail">
       <div className="detail-top-row">
-        <Link to="/media" className="back-link">← Media Library</Link>
+        <Link to="/media" className="back-link">← Home</Link>
         {id && (
           <div className="detail-add-to-playlist">
             <AddToPlaylistMenu contentId={id} label="Add to playlist" />
@@ -233,210 +233,209 @@ export default function ContentDetail() {
         )}
       </div>
 
-      <video
-        key={streamUrl}
-        ref={videoRef}
-        src={streamUrl}
-        controls
-        className="detail-video"
-        preload="metadata"
-      >
-        {id && captionTracks.map((track, i) => (
-          <track
-            key={track.code}
-            kind="subtitles"
-            src={getCaptionsUrl(id, track.code)}
-            srcLang={track.code}
-            label={track.label}
-            default={0 === i}
-          />
-        ))}
-      </video>
+      <div className="detail-layout">
+        <div className="detail-main">
+          <video
+            key={streamUrl}
+            ref={videoRef}
+            src={streamUrl}
+            controls
+            className="detail-video"
+            preload="metadata"
+          >
+            {id && captionTracks.map(track => (
+              <track
+                key={track.code}
+                kind="subtitles"
+                src={getCaptionsUrl(id, track.code)}
+                srcLang={track.code}
+                label={track.label}
+              />
+            ))}
+          </video>
 
-      {content?.transcription?.captions && content.transcription.captions.availableTranslations.length > 0 && (
-        <CaptionLanguagePicker
-          options={content.transcription.captions.availableTranslations}
-          active={activeTranslations}
-          onAdd={handleAddCaptionLanguage}
-        />
-      )}
+          {showResumePrompt && resumePosition != null && (
+            <div className="resume-prompt">
+              <span>Resume at {formatTimestamp(resumePosition)}?</span>
+              <div className="resume-prompt-actions">
+                <button type="button" className="resume-prompt-btn resume-prompt-btn-primary" onClick={handleResume}>
+                  Resume
+                </button>
+                <button type="button" className="resume-prompt-btn" onClick={handleDismissResume}>
+                  Start over
+                </button>
+              </div>
+            </div>
+          )}
 
-      {showResumePrompt && resumePosition != null && (
-        <div className="resume-prompt">
-          <span>Resume at {formatTimestamp(resumePosition)}?</span>
-          <div className="resume-prompt-actions">
-            <button type="button" className="resume-prompt-btn resume-prompt-btn-primary" onClick={handleResume}>
-              Resume
-            </button>
-            <button type="button" className="resume-prompt-btn" onClick={handleDismissResume}>
-              Start over
-            </button>
+          {content?.transcription?.chapters != null && content.transcription.chapters.length > 0 && (
+            <ChapterRail chapters={content.transcription.chapters} onSelect={handleChapterClick} />
+          )}
+
+          <div className="detail-info-box">
+            {canEdit && (
+              <div className="detail-info-thumbnail">
+                <div className="detail-summary-header">
+                  <label className="form-label">Thumbnail</label>
+                  <button
+                    type="button"
+                    className="detail-generate-btn"
+                    onClick={() => void handleRegenerateThumbnail()}
+                    disabled={regeneratingThumbnail}
+                    title="Regenerate thumbnail — AI picks the best frame"
+                  >
+                    {regeneratingThumbnail ? <SpinnerIcon /> : <RegenerateIcon />}
+                  </button>
+                </div>
+                {content?.hasThumbnail ? (
+                  <img
+                    src={getThumbnailUrl(content.id, thumbnailVersion || undefined)}
+                    alt="Thumbnail"
+                    className="detail-thumbnail-preview"
+                  />
+                ) : (
+                  <div className="detail-thumbnail-placeholder">
+                    {regeneratingThumbnail ? 'Generating…' : 'No thumbnail yet'}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {canEdit ? (
+              <input
+                className="detail-info-title-input"
+                type="text"
+                maxLength={255}
+                placeholder={content?.filename ?? 'Loading…'}
+                value={titleInput}
+                onChange={e => setTitleInput(e.target.value)}
+                aria-label="Title"
+              />
+            ) : (
+              <h1 className="detail-info-title">{content?.title || content?.filename}</h1>
+            )}
+
+            {(content?.transcription?.category || (content?.transcription?.tags && content.transcription.tags.length > 0)) && (
+              <div className="detail-tags-row">
+                {content?.transcription?.category && (
+                  <Link
+                    to={`/media?category=${encodeURIComponent(content.transcription.category)}`}
+                    className="badge badge-category detail-category-badge detail-category-badge-link"
+                    title={`Browse all "${content.transcription.category}" videos`}
+                  >
+                    {content.transcription.category}
+                  </Link>
+                )}
+                {content?.transcription?.tags?.map(tag => (
+                  <span key={tag} className="detail-tag-chip">{tag}</span>
+                ))}
+              </div>
+            )}
+
+            <div className="detail-info-summary">
+              {canEdit && transcriptReady && (
+                <button
+                  type="button"
+                  className="detail-generate-btn detail-info-summary-regen"
+                  onClick={() => void handleGenerateSummary()}
+                  disabled={generatingSummary}
+                  title="Generate summary from transcript"
+                >
+                  {generatingSummary ? <SpinnerIcon /> : <RegenerateIcon />}
+                </button>
+              )}
+              {canEdit ? (
+                <textarea
+                  className="detail-info-summary-textarea"
+                  maxLength={200}
+                  rows={3}
+                  placeholder={
+                    !transcriptReady
+                      ? (transcription === null || transcription.status === 'pending' || transcription.status === 'processing'
+                          ? 'Waiting for transcription…'
+                          : 'Transcription failed')
+                      : 'Click ↺ to generate a summary from the transcript'
+                  }
+                  value={summaryInput}
+                  onChange={e => setSummaryInput(e.target.value)}
+                  aria-label="Summary"
+                />
+              ) : (
+                <p className="detail-info-summary-text">{summaryInput || 'No summary available.'}</p>
+              )}
+            </div>
+
+            {transcriptReady && transcription.text && (
+              <div className="detail-transcript">
+                <button
+                  type="button"
+                  className="detail-transcript-toggle"
+                  onClick={() => setTranscriptOpen(o => !o)}
+                  aria-expanded={transcriptOpen}
+                >
+                  <span>Transcript</span>
+                  <svg
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    className={`detail-chevron${transcriptOpen ? ' detail-chevron-open' : ''}`}
+                  >
+                    <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                {transcriptOpen && (
+                  <p className="detail-transcript-text">{transcription.text}</p>
+                )}
+              </div>
+            )}
+
+            {!transcriptReady && transcription?.status !== 'failed' && (
+              <div className="detail-transcribing">
+                <Spinner />
+                {transcription === null || transcription.status === 'pending'
+                  ? 'Waiting for transcription…'
+                  : 'Transcribing audio…'}
+              </div>
+            )}
+
+            <div className="detail-actions">
+              {canDeleteContent(user, content?.ownerId ?? null) && (
+                <button
+                  type="button"
+                  className="btn-delete"
+                  onClick={() => void handleDelete()}
+                  disabled={deleting}
+                >
+                  {deleting ? 'Deleting…' : 'Delete'}
+                </button>
+              )}
+              {canEdit && (
+                <div className="detail-actions-right">
+                  {saveSuccess && <span className="detail-saved">Saved</span>}
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => void handleSave()}
+                    disabled={saving || !content}
+                  >
+                    {saving ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      )}
 
-      {content?.transcription?.chapters != null && content.transcription.chapters.length > 0 && (
-        <ChapterRail chapters={content.transcription.chapters} onSelect={handleChapterClick} />
-      )}
+        {relatedVideos && relatedVideos.length > 0 && (
+          <aside className="detail-related">
+            <RelatedVideosRail videos={relatedVideos} />
+          </aside>
+        )}
+      </div>
 
-      {relatedVideos && relatedVideos.length > 0 && (
-        <RelatedVideosRail videos={relatedVideos} />
-      )}
-
-      {analytics && analytics.views > 0 && (
+      {canEdit && analytics && analytics.views > 0 && (
         <VideoAnalyticsSection analytics={analytics} />
       )}
-
-      <div className="detail-form">
-        <div className="form-field">
-          <div className="detail-summary-header">
-            <label className="form-label">Thumbnail</label>
-            <button
-              type="button"
-              className="detail-generate-btn"
-              onClick={() => void handleRegenerateThumbnail()}
-              disabled={regeneratingThumbnail}
-              title="Regenerate thumbnail — AI picks the best frame"
-            >
-              {regeneratingThumbnail ? <SpinnerIcon /> : <RegenerateIcon />}
-            </button>
-          </div>
-          {content?.hasThumbnail ? (
-            <img
-              src={getThumbnailUrl(content.id, thumbnailVersion || undefined)}
-              alt="Thumbnail"
-              className="detail-thumbnail-preview"
-            />
-          ) : (
-            <div className="detail-thumbnail-placeholder">
-              {regeneratingThumbnail ? 'Generating…' : 'No thumbnail yet'}
-            </div>
-          )}
-        </div>
-
-        <div className="form-field">
-          <label className="form-label" htmlFor="cd-title">Title</label>
-          <input
-            id="cd-title"
-            className="form-input"
-            type="text"
-            maxLength={255}
-            placeholder={content?.filename ?? 'Loading…'}
-            value={titleInput}
-            onChange={e => setTitleInput(e.target.value)}
-          />
-        </div>
-
-        {(content?.transcription?.category || (content?.transcription?.tags && content.transcription.tags.length > 0)) && (
-          <div className="form-field">
-            <label className="form-label">Category &amp; tags</label>
-            <div className="detail-tags-row">
-              {content?.transcription?.category && (
-                <Link
-                  to={`/media?category=${encodeURIComponent(content.transcription.category)}`}
-                  className="badge badge-category detail-category-badge detail-category-badge-link"
-                  title={`Browse all "${content.transcription.category}" videos`}
-                >
-                  {content.transcription.category}
-                </Link>
-              )}
-              {content?.transcription?.tags?.map(tag => (
-                <span key={tag} className="detail-tag-chip">{tag}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="form-field">
-          <div className="detail-summary-header">
-            <label className="form-label" htmlFor="cd-summary">Summary</label>
-            {transcriptReady && (
-              <button
-                type="button"
-                className="detail-generate-btn"
-                onClick={() => void handleGenerateSummary()}
-                disabled={generatingSummary}
-                title="Generate summary from transcript"
-              >
-                {generatingSummary ? <SpinnerIcon /> : <RegenerateIcon />}
-              </button>
-            )}
-          </div>
-          <textarea
-            id="cd-summary"
-            className="form-input detail-summary"
-            maxLength={200}
-            rows={3}
-            placeholder={
-              !transcriptReady
-                ? (transcription === null || transcription.status === 'pending' || transcription.status === 'processing'
-                    ? 'Waiting for transcription…'
-                    : 'Transcription failed')
-                : 'Click ↺ to generate a summary from the transcript'
-            }
-            value={summaryInput}
-            onChange={e => setSummaryInput(e.target.value)}
-          />
-          <span className="detail-charcount">{summaryInput.length}/200</span>
-        </div>
-
-        {transcriptReady && transcription.text && (
-          <div className="detail-transcript">
-            <button
-              type="button"
-              className="detail-transcript-toggle"
-              onClick={() => setTranscriptOpen(o => !o)}
-              aria-expanded={transcriptOpen}
-            >
-              <span>Transcript</span>
-              <svg
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                aria-hidden="true"
-                className={`detail-chevron${transcriptOpen ? ' detail-chevron-open' : ''}`}
-              >
-                <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-              </svg>
-            </button>
-            {transcriptOpen && (
-              <p className="detail-transcript-text">{transcription.text}</p>
-            )}
-          </div>
-        )}
-
-        {!transcriptReady && transcription?.status !== 'failed' && (
-          <div className="detail-transcribing">
-            <Spinner />
-            {transcription === null || transcription.status === 'pending'
-              ? 'Waiting for transcription…'
-              : 'Transcribing audio…'}
-          </div>
-        )}
-
-        <div className="detail-actions">
-          {canDeleteContent(user, content?.ownerId ?? null) && (
-            <button
-              type="button"
-              className="btn-delete"
-              onClick={() => void handleDelete()}
-              disabled={deleting}
-            >
-              {deleting ? 'Deleting…' : 'Delete'}
-            </button>
-          )}
-          <div className="detail-actions-right">
-            {saveSuccess && <span className="detail-saved">Saved</span>}
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => void handleSave()}
-              disabled={saving || !content}
-            >
-              {saving ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

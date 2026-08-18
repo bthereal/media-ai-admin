@@ -4,10 +4,10 @@ import { type SearchResult, type SearchVideoResult, searchContent } from '../../
 import './SearchPanel.css'
 
 const SUGGESTIONS = [
-  'Show me videos about machine learning',
-  'What videos cover web development?',
-  'Videos about project management',
-  'Hardware and infrastructure content',
+  'How do I format a drive for Mac?',
+  'Tutorials on macOS tips and tricks',
+  'Videos about internet policy and governance',
+  'Conference talks and webinars',
 ]
 
 interface SearchPanelProps {
@@ -24,6 +24,11 @@ export default function SearchPanel({ open, onClose }: SearchPanelProps) {
 
   useEffect(() => {
     if (open) {
+      // Always open to a clean slate — a previous search's result/error doesn't
+      // linger if the panel was closed and reopened.
+      setQuery('')
+      setResult(null)
+      setError(false)
       setTimeout(() => inputRef.current?.focus(), 300)
     }
   }, [open])
@@ -137,7 +142,12 @@ export default function SearchPanel({ open, onClose }: SearchPanelProps) {
           )}
 
           {error && !loading && (
-            <div className="sp-error">Search failed. Please try again.</div>
+            <div className="sp-error-block">
+              <div className="sp-error">Search failed. Please try again.</div>
+              <button type="button" className="sp-reset" onClick={handleReset}>
+                ↺ New search
+              </button>
+            </div>
           )}
 
           {result !== null && !loading && (

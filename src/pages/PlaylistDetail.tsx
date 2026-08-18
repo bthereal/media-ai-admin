@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import CaptionLanguagePicker from '../components/CaptionLanguagePicker/CaptionLanguagePicker'
 import ChapterRail from '../components/ChapterRail/ChapterRail'
-import { useCaptionTracks } from '../hooks/useCaptionTracks'
 import { usePlaybackTracking } from '../hooks/usePlaybackTracking'
+import { getCaptionTracks } from '../lib/captionTracks'
 import { deletePlaylist, fetchPlaylist, removePlaylistItem, reorderPlaylistItems, updatePlaylist } from '../services/playlistsApi'
 import { getCaptionsUrl, getStreamUrl, getThumbnailUrl } from '../services/contentApi'
 import type { PlaylistDetailDto } from '../types/playlist-api.d.ts'
@@ -23,10 +22,7 @@ export default function PlaylistDetail() {
 
   const currentItem = playlist?.items[currentIndex] ?? null
   usePlaybackTracking(currentItem?.content.id, videoRef)
-  const { tracks: captionTracks, activeTranslations, addLanguage: handleAddCaptionLanguage } = useCaptionTracks(
-    currentItem?.content.id,
-    currentItem?.content.transcription?.captions,
-  )
+  const captionTracks = getCaptionTracks(currentItem?.content.transcription?.captions)
 
   useEffect(() => {
     if (!id) return
@@ -162,27 +158,18 @@ export default function PlaylistDetail() {
           className="detail-video"
           onEnded={handleEnded}
         >
-          {captionTracks.map((track, i) => (
+          {captionTracks.map(track => (
             <track
               key={track.code}
               kind="subtitles"
               src={getCaptionsUrl(currentItem.content.id, track.code)}
               srcLang={track.code}
               label={track.label}
-              default={0 === i}
             />
           ))}
         </video>
       ) : (
         <div className="playlist-empty-player">Add videos to this playlist to start watching.</div>
-      )}
-
-      {currentItem?.content.transcription?.captions && currentItem.content.transcription.captions.availableTranslations.length > 0 && (
-        <CaptionLanguagePicker
-          options={currentItem.content.transcription.captions.availableTranslations}
-          active={activeTranslations}
-          onAdd={handleAddCaptionLanguage}
-        />
       )}
 
       {currentItem?.content.transcription?.chapters != null && currentItem.content.transcription.chapters.length > 0 && (
